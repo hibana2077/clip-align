@@ -1,0 +1,5 @@
+src/__pycache__/
+src/data/
+data/
+src/cache/
+src/clip_align/__pycache__/

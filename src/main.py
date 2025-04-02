@@ -1,144 +1,177 @@
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision.datasets import CIFAR10
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
-from torch.utils.data import DataLoader
-from transformers import CLIPProcessor, CLIPModel
-from torchvision.models import resnet18
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, random_split, TensorDataset
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 
-# 1. 加载CLIP模型和预处理
-clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").eval()
-clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+# self defined dataset
+from clip_align.dataset import EmbeddingDataset
+from clip_align.converter import Converter
+from clip_align.loss import AlignLoss
+from clip_align.vis import visualize_projection
 
-# 2. 加载ResNet-18
-resnet = resnet18(pretrained=True)
-resnet = nn.Sequential(*list(resnet.children())[:-1])  # 去掉最后的全连接层
-resnet.eval()
+# Config
+DATASET_NAME = "cifar10"
+# MODEL_NAME = "resnet18"
+MODEL_NAME = "resnet50"
 
-# 3. 数据预处理
-def get_transforms():
-    # CLIP的预处理会自动处理尺寸
-    clip_transform = lambda x: clip_processor(images=x, return_tensors="pt")['pixel_values'][0]
+# 设置设备
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Device: {device}")
+
+def get_dataloader(batch_size=128, preload=True, cache_dir=None):
+    # 加载原始数据集
+    dataset = EmbeddingDataset(DATASET_NAME, MODEL_NAME)
     
-    # ResNet预处理需要调整尺寸到224x224
-    resnet_transform = Compose([
-        Resize(256),
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    return clip_transform, resnet_transform
-
-# 4. 自定义CIFAR-10数据集
-class CIFAR10Dataset(CIFAR10):
-    def __init__(self, root, train=True, transform=None):
-        super().__init__(root, train=train, download=True)
-        self.clip_transform, self.resnet_transform = get_transforms()
-
-    def __getitem__(self, index):
-        img, _ = self.data[index], self.targets[index]
-        img = Image.fromarray(img)
+    # 预加载数据到内存并支持缓存
+    if preload and cache_dir is not None:
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = os.path.join(cache_dir, f"{DATASET_NAME}_{MODEL_NAME}_cache.pt")
         
-        # 应用不同预处理
-        clip_img = self.clip_transform(img)
-        resnet_img = self.resnet_transform(img)
-        
-        return clip_img, resnet_img
-
-# 5. 创建数据加载器
-def get_dataloader(batch_size=128):
-    dataset = CIFAR10Dataset(root="./data", train=True)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-
-# 6. 生成嵌入
-def generate_embeddings(dataloader):
-    clip_embeddings = []
-    resnet_embeddings = []
-    
-    with torch.no_grad():
-        for clip_imgs, resnet_imgs in dataloader:
-            # CLIP嵌入
-            clip_features = clip_model.get_image_features(clip_imgs)
-            clip_embeddings.append(clip_features)
+        # 检查缓存文件是否存在
+        if os.path.exists(cache_file):
+            print("Loading data from cache...")
+            loaded = torch.load(cache_file)
+            clip_embeddings = loaded['clip_embeddings']
+            resnet_embeddings = loaded['resnet_embeddings']
+            labels = loaded['labels']
+        else:
+            print("Preloading data and saving to cache...")
+            clip_embeddings = []
+            resnet_embeddings = []
+            labels = []
+            for clip_emb, resnet_emb, label in tqdm(dataset, desc="Preloading data"):
+                clip_embeddings.append(clip_emb)
+                resnet_embeddings.append(resnet_emb)
+                labels.append(label)
             
-            # ResNet嵌入
-            resnet_features = resnet(resnet_imgs)
-            resnet_embeddings.append(resnet_features.view(resnet_features.size(0), -1))
-    
-    return torch.cat(clip_embeddings), torch.cat(resnet_embeddings)
-
-# 7. 转换矩阵
-class TransformationMatrix(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.V = nn.Parameter(torch.empty(input_dim, output_dim))
-        nn.init.xavier_uniform_(self.V)
-
-    def forward(self, x):
-        return x @ self.V
-
-# 8. 主训练流程
-def main():
-    # 创建数据加载器
-    dataloader = get_dataloader(batch_size=128)
-    
-    # 生成嵌入
-    clip_emb, resnet_emb = generate_embeddings(dataloader)
-    
-    # 初始化转换矩阵
-    input_dim = clip_emb.shape[1]   # CLIP嵌入维度（512）
-    output_dim = resnet_emb.shape[1] # ResNet嵌入维度（512）
-    V = TransformationMatrix(input_dim, output_dim)
-    
-    # 训练设置
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(V.parameters(), lr=0.001)
-    
-    # 训练循环
-    for epoch in range(20):
-        optimizer.zero_grad()
-        transformed = V(clip_emb)
-        loss = criterion(transformed, resnet_emb)
-        loss.backward()
-        optimizer.step()
+            # 转换为张量
+            clip_embeddings = torch.stack(clip_embeddings)
+            resnet_embeddings = torch.stack(resnet_embeddings)
+            labels = torch.tensor(labels)
+            
+            # 保存缓存
+            torch.save({
+                'clip_embeddings': clip_embeddings,
+                'resnet_embeddings': resnet_embeddings,
+                'labels': labels,
+            }, cache_file)
         
-        print(f"Epoch {epoch+1}/20, Loss: {loss.item():.4f}")
+        # 创建新的TensorDataset
+        dataset = TensorDataset(clip_embeddings, resnet_embeddings, labels)
+        clip_model_embedding_size = clip_embeddings.size(1)
+        img_model_embedding_size = resnet_embeddings.size(1)
+    else:
+        # 从原始数据集获取尺寸
+        clip_model_embedding_size = dataset.clip_model_embedding_size
+        img_model_embedding_size = dataset.img_model_embedding_size
 
-    # 9. 测试文本转换
-    # CIFAR-10类别文本描述
-    classes = ['airplane', 'automobile', 'bird', 'cat', 'deer',
-               'dog', 'frog', 'horse', 'ship', 'truck']
-    text_descriptions = [f"A photo of a {c}" for c in classes]
+    # 划分数据集
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    generator = torch.Generator().manual_seed(42)  # 固定随机种子
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
     
-    # 生成文本嵌入
-    text_inputs = clip_processor(text=text_descriptions, 
-                                return_tensors="pt", 
-                                padding=True)
-    with torch.no_grad():
-        text_emb = clip_model.get_text_features(**text_inputs)
-    
-    # 转换文本嵌入
-    transformed_text_emb = V(text_emb)
-    
-    # 10. 验证图像-文本匹配
-    # 随机选择一个图像样本
-    sample_idx = np.random.randint(len(resnet_emb))
-    sample_image_emb = resnet_emb[sample_idx].unsqueeze(0)
-    
-    # 计算相似度
-    similarities = torch.nn.functional.cosine_similarity(
-        transformed_text_emb,
-        sample_image_emb,
-        dim=1
+    # 创建DataLoader
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False
     )
     
-    # 打印结果
-    print("\nSimilarity scores:")
-    for i, sim in enumerate(similarities):
-        print(f"{classes[i]:>10}: {sim.item():.4f}")
+    return train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    # 创建数据加载器
+    train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size = get_dataloader(
+        preload=True,
+        cache_dir="./cache"
+    )
+    print(f"CLIP Model Embedding Size: {clip_model_embedding_size}")
+    print(f"ResNet Model Embedding Size: {img_model_embedding_size}")
+    # 测试数据加载器
+    for clip_embedding, resnet_embedding, label in train_loader:
+        print(f"CLIP Embedding Shape: {clip_embedding.shape}")
+        print(f"ResNet Embedding Shape: {resnet_embedding.shape}")
+        print(f"Label: {label}")
+        break
+
+    for clip_embedding, resnet_embedding, label in val_loader:
+        print(f"CLIP Embedding Shape: {clip_embedding.shape}")
+        print(f"ResNet Embedding Shape: {resnet_embedding.shape}")
+        print(f"Label: {label}")
+        break
+    
+    # 创建模型
+    converter = Converter(clip_model_embedding_size, img_model_embedding_size).to(device)
+    align_loss = AlignLoss().to(device)
+    optimizer = torch.optim.AdamW(
+        converter.parameters(), 
+        lr=3e-4,
+        weight_decay=1e-4  # 添加L2正则化
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+    criterion = nn.MSELoss()
+    # 训练模型
+    num_epochs = 10
+    for epoch in range(num_epochs):
+        converter.train()
+        running_loss = 0.0
+        for clip_embedding, resnet_embedding, label in tqdm(train_loader):
+            clip_embedding = clip_embedding.to(device)
+            resnet_embedding = resnet_embedding.to(device)
+            label = label.to(device)
+
+            optimizer.zero_grad()
+            output = converter(clip_embedding)
+            loss = align_loss(output, resnet_embedding)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+
+        scheduler.step()
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+
+    # 验证模型
+    converter.eval()
+    val_loss = 0.0
+    all_clip_embeddings = []
+    all_resnet_embeddings = []
+    all_labels = []
+
+    with torch.no_grad():
+        for clip_embedding, resnet_embedding, label in val_loader:
+            clip_embedding = clip_embedding.to(device)
+            resnet_embedding = resnet_embedding.to(device)
+            label = label.to(device)
+
+            output = converter(clip_embedding)
+            loss = align_loss(output, resnet_embedding)
+            val_loss += loss.item()
+
+            all_clip_embeddings.append(clip_embedding.cpu())
+            all_resnet_embeddings.append(resnet_embedding.cpu())
+            all_labels.append(label.cpu())
+    val_loss /= len(val_loader)
+    print(f"Validation Loss: {val_loss:.4f}")
+    all_clip_embeddings = torch.cat(all_clip_embeddings)
+    all_resnet_embeddings = torch.cat(all_resnet_embeddings)
+    all_labels = torch.cat(all_labels)
+    print(f"All CLIP Embeddings Shape: {all_clip_embeddings.shape}")
+    print(f"All ResNet Embeddings Shape: {all_resnet_embeddings.shape}")
+    print(f"All Labels Shape: {all_labels.shape}")
+    # 可视化
+    visualize_projection(all_clip_embeddings, all_labels)
+    visualize_projection(all_resnet_embeddings, all_labels)

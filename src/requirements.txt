@@ -1,3 +1,7 @@
 transformers
 pillow
 numpy
+tqdm
+timm
+scikit-learn
+matplotlib
