@@ -18,8 +18,8 @@ from clip_align.vis import visualize_projection
 
 # Config
 DATASET_NAME = "cifar10"
-# MODEL_NAME = "resnet18"
-MODEL_NAME = "resnet50"
+MODEL_NAME = "resnet18"
+# MODEL_NAME = "resnet50"
 
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -114,7 +114,7 @@ if __name__ == '__main__':
         break
     
     # 创建模型
-    converter = Converter(clip_model_embedding_size, img_model_embedding_size).to(device)
+    converter = Converter(img_model_embedding_size, clip_model_embedding_size).to(device)
     align_loss = AlignLoss().to(device)
     optimizer = torch.optim.AdamW(
         converter.parameters(), 
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     criterion = nn.MSELoss()
     # 训练模型
-    num_epochs = 10
+    num_epochs = 30
     for epoch in range(num_epochs):
         converter.train()
         running_loss = 0.0
@@ -134,8 +134,8 @@ if __name__ == '__main__':
             label = label.to(device)
 
             optimizer.zero_grad()
-            output = converter(clip_embedding)
-            loss = align_loss(output, resnet_embedding)
+            output = converter(resnet_embedding)
+            loss = align_loss(output, clip_embedding)
             loss.backward()
             optimizer.step()
 
@@ -157,8 +157,8 @@ if __name__ == '__main__':
             resnet_embedding = resnet_embedding.to(device)
             label = label.to(device)
 
-            output = converter(clip_embedding)
-            loss = align_loss(output, resnet_embedding)
+            output = converter(resnet_embedding)
+            loss = align_loss(output, clip_embedding)
             val_loss += loss.item()
 
             all_clip_embeddings.append(clip_embedding.cpu())
@@ -173,5 +173,5 @@ if __name__ == '__main__':
     print(f"All ResNet Embeddings Shape: {all_resnet_embeddings.shape}")
     print(f"All Labels Shape: {all_labels.shape}")
     # 可视化
-    visualize_projection(all_clip_embeddings, all_labels)
-    visualize_projection(all_resnet_embeddings, all_labels)
+    visualize_projection(all_clip_embeddings, all_labels, save_name="clip_projection.png")
+    visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png")

@@ -1,7 +1,7 @@
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-def visualize_projection(embeddings, labels):
+def visualize_projection(embeddings, labels, save_name="projection.png"):
     tsne = TSNE(n_components=2, random_state=0) # 设置random_state以保证结果可复现
     projected = tsne.fit_transform(embeddings.cpu())
     
@@ -12,4 +12,4 @@ def visualize_projection(embeddings, labels):
     plt.xlabel("Dimension 1")
     plt.ylabel("Dimension 2")
     # plt.show()
-    plt.savefig("tsne_projection.png")  # 保存图像
+    plt.savefig(save_name)

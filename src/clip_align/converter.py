@@ -1,67 +1,27 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 class Converter(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim=1024, num_blocks=2):
+    def __init__(self, input_dim, output_dim, hidden_dim=1024):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         
-        # 特征增强层
-        self.augment = nn.Sequential(
-            nn.Dropout(0.1),
-            nn.LayerNorm(input_dim)
-        )
+        # 第一条路径的参数
+        self.X1 = nn.Parameter(torch.randn(input_dim, hidden_dim))
+        self.W1 = nn.Parameter(torch.randn(hidden_dim, output_dim))
         
-        # 动态维度调整
-        self.up_proj = nn.Linear(input_dim, hidden_dim)
-        self.down_proj = nn.Linear(hidden_dim, output_dim)
-        
-        # 残差块（简化版）
-        self.res_blocks = nn.ModuleList([
-            nn.Sequential(
-                nn.LayerNorm(hidden_dim),
-                nn.Linear(hidden_dim, hidden_dim * 2),
-                nn.GELU(),
-                nn.Dropout(0.1),
-                nn.Linear(hidden_dim * 2, hidden_dim)
-            ) for _ in range(num_blocks)
-        ])
-        
-        # 自适应参数
-        self.scale = nn.Parameter(torch.ones(output_dim) * 0.01)
-        self.bias = nn.Parameter(torch.zeros(output_dim))
-        
-        # 初始化
-        self._init_weights()
+        # 第二条路径的参数
+        self.X2 = nn.Parameter(torch.randn(input_dim, hidden_dim))
+        self.W2 = nn.Parameter(torch.randn(hidden_dim, output_dim))
 
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.orthogonal_(m.weight)
-                nn.init.constant_(m.bias, 0)
-        nn.init.normal_(self.scale, mean=1.0, std=0.01)
-        nn.init.zeros_(self.bias)
+        # 偏置参数
+        self.b = nn.Parameter(torch.zeros(output_dim))
 
     def forward(self, x):
-        # 特征增强
-        x = self.augment(x)
+        # 计算两个路径的矩阵乘积
+        path1 = torch.matmul(x, self.X1) @ self.W1
+        path2 = torch.matmul(x, self.X2) @ self.W2
         
-        # 维度提升
-        x = self.up_proj(x)
-        x = F.gelu(x)
-        
-        # 残差处理
-        for block in self.res_blocks:
-            residual = x
-            x = block(x)
-            x = x + residual  # 显式残差连接
-            
-        # 维度降下
-        x = self.down_proj(x)
-        
-        # 自适应调整
-        x = x * (1 + self.scale) + self.bias  # 改进的缩放方式
-        
-        return x
+        # Hadamard乘积（逐元素相乘）后加偏置
+        return path1 * path2 + self.b
