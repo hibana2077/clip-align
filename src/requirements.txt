@@ -6,3 +6,4 @@ timm
 scikit-learn
 matplotlib
 datasets
+seaborn

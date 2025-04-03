@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from clip_align.dataset import EmbeddingDataset
 from clip_align.converter import Converter
 from clip_align.loss import AlignLoss
-from clip_align.vis import visualize_projection
+from clip_align.vis import visualize_projection, visualize_similarity
 
 # Config
 # DATASET_NAME = "cifar10"
@@ -35,7 +35,7 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = os.path.join(cache_dir, f"{DATASET_NAME}_{MODEL_NAME}_cache.pt")
         
-        # 检查缓存文件是否存在
+        # Check if cache file exists
         if os.path.exists(cache_file):
             print("Loading data from cache...")
             loaded = torch.load(cache_file)
@@ -153,6 +153,7 @@ if __name__ == '__main__':
     val_loss = 0.0
     all_clip_embeddings = []
     all_resnet_embeddings = []
+    all_convert_embeddings = []
     all_labels = []
 
     with torch.no_grad():
@@ -167,15 +168,20 @@ if __name__ == '__main__':
 
             all_clip_embeddings.append(clip_embedding.cpu())
             all_resnet_embeddings.append(resnet_embedding.cpu())
+            all_convert_embeddings.append(output.cpu())
             all_labels.append(label.cpu())
     val_loss /= len(val_loader)
     print(f"Validation Loss: {val_loss:.4f}")
     all_clip_embeddings = torch.cat(all_clip_embeddings)
     all_resnet_embeddings = torch.cat(all_resnet_embeddings)
+    all_convert_embeddings = torch.cat(all_convert_embeddings)
     all_labels = torch.cat(all_labels)
+
     print(f"All CLIP Embeddings Shape: {all_clip_embeddings.shape}")
     print(f"All ResNet Embeddings Shape: {all_resnet_embeddings.shape}")
     print(f"All Labels Shape: {all_labels.shape}")
     # 可视化
-    visualize_projection(all_clip_embeddings, all_labels, save_name="clip_projection.png")
-    visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png")
+    visualize_projection(all_clip_embeddings, all_labels, save_name="clip_projection.png", label_type="tensor")
+    visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
+    visualize_projection(all_convert_embeddings, all_labels, save_name="convert_projection.png", label_type="tensor")
+    visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
