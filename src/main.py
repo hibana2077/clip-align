@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # self defined dataset
 from clip_align.dataset import EmbeddingDataset
-from clip_align.converter import Converter
+from clip_align.converter import Converter, Converter_Att, Converter_Linear
 from clip_align.loss import AlignLoss
 from clip_align.vis import visualize_projection, visualize_similarity
 
@@ -120,6 +120,16 @@ if __name__ == '__main__':
     
     # 创建模型
     converter = Converter(img_model_embedding_size, clip_model_embedding_size).to(device)
+    # converter = Converter_Att(
+    #     img_model_embedding_size,
+    #     clip_model_embedding_size,
+    #     hidden_dim=1024
+    # ).to(device)
+    # converter = Converter_Linear(
+    #     img_model_embedding_size,
+    #     clip_model_embedding_size
+    # ).to(device)
+    print(f"Parameter Count: {sum(p.numel() for p in converter.parameters())/1e6:.2f}M")
     align_loss = AlignLoss().to(device)
     optimizer = torch.optim.AdamW(
         converter.parameters(), 
@@ -128,7 +138,7 @@ if __name__ == '__main__':
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     # 训练模型
-    num_epochs = 30
+    num_epochs = 100
     for epoch in range(num_epochs):
         converter.train()
         running_loss = 0.0

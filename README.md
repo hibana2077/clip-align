@@ -1,1 +1,1 @@
-# clip-align
+# UTENA: Unified Text-Embedding Network Aligner
