@@ -122,7 +122,6 @@ if __name__ == '__main__':
         weight_decay=1e-4  # 添加L2正则化
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-    criterion = nn.MSELoss()
     # 训练模型
     num_epochs = 30
     for epoch in range(num_epochs):
