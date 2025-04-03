@@ -39,12 +39,9 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
         if os.path.exists(cache_file):
             print("Loading data from cache...")
             loaded = torch.load(cache_file)
-            clip_embeddings = loaded['clip_embeddings'] # cuda
-            resnet_embeddings = loaded['resnet_embeddings'] # cuda
-            labels = loaded['labels'] # list[cuda]
-
-            if type(labels) == list:
-                labels = torch.tensor(labels)
+            clip_embeddings = loaded['clip_embeddings']
+            resnet_embeddings = loaded['resnet_embeddings']
+            labels = loaded['labels']
 
         else:
             print("Preloading data and saving to cache...")
@@ -59,11 +56,7 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
             # 转换为张量
             clip_embeddings = torch.stack(clip_embeddings)
             resnet_embeddings = torch.stack(resnet_embeddings)
-            if DATASET_NAME != "flickr30k":
-                labels = torch.tensor(labels)
-            else:                
-                labels = np.array(labels)
-                labels = torch.tensor(labels)
+            labels = torch.stack(labels)
 
             # 保存缓存
             torch.save({
