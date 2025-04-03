@@ -1,102 +1,107 @@
-import torch
-import torch.nn as nn
-from torchvision import datasets
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
-from torch.utils.data import DataLoader, Dataset
-from transformers import CLIPProcessor, CLIPModel
-import timm
-import numpy as np
+from torchvision import transforms
 from PIL import Image
+import torch
+import timm
+from torch.utils.data import Dataset, DataLoader
+from torchvision.datasets import CIFAR10, CIFAR100
+from transformers import CLIPModel, CLIPProcessor
+import datasets  # HuggingFace datasets
+from .flickr30k import FlickrDataset
+import numpy as np
 
 DATASET_DICT = {
-    "cifar10": datasets.CIFAR10,
-    "cifar100": datasets.CIFAR100,
-    "flickr30k": datasets.Flickr30k,  # 添加Flickr30k到數據集字典
+    "cifar10": CIFAR10,
+    "cifar100": CIFAR100,
+    # "flickr30k": FlickrDataset,  # 替換為您的自定義數據集
 }
 
 def default_transforms():
-    img_transform = Compose([
-        Resize(224),
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    return transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    return img_transform
 
 class EmbeddingDataset(Dataset):
-    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=default_transforms(), device=None):
+    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, **kwargs):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        # 根據數據集類型初始化
-        if dataset in ['cifar10', 'cifar100']:
+        self.device = device
+
+        # 初始化數據集
+        if dataset == "flickr30k":
+            self.dataset_name = dataset
+            # 使用HuggingFace的load_dataset加載自定義數據集
+            self.dataset = FlickrDataset()
+            self.dataset.download_and_prepare()  # 需要手動下載和準備數據
+            self.dataset = self.dataset.as_dataset()  # 轉換為可索引格式
+        else:
+            # 處理CIFAR等其他數據集
             self.dataset_name = dataset
             self.dataset = DATASET_DICT[dataset](root="./data", train=True, download=True)
-            # 將CIFAR數據轉換為(img, label)列表
             self.dataset = list(zip(self.dataset.data, self.dataset.targets))
-        elif dataset == 'flickr30k':
-            self.dataset_name = dataset
-            if ann_file is None:
-                raise ValueError("ann_file must be provided for Flickr30k dataset")
-            # 加載Flickr30k數據集，返回圖像路徑和標注
-            self.dataset = DATASET_DICT[dataset](root="./data/flickr30k", ann_file=ann_file)
-            # 將標注轉換為0（或根據需求調整）
-            self.dataset = [(img, 0) for img, _ in self.dataset]
-        else:
-            raise ValueError(f"Unsupported dataset: {dataset}")
         
-        # 初始化模型和轉換
+        # 初始化模型
         self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-        self.resnet_features = timm.create_model(img_model, pretrained=True)
-        self.resnet_features = torch.nn.Sequential(*list(self.resnet_features.children())[:-1]).to(device)
+        self.img_features = timm.create_model(img_model, pretrained=True).to(device)
+        self.img_features = torch.nn.Sequential(*list(self.img_features.children())[:-1])
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-        self.img_model_transform = img_model_transform
-        self.device = device
         
-        # 設置模型為評估模式並測試虛擬輸入
+        # 設置轉換
+        self.img_model_transform = img_model_transform or default_transforms()
+        
+        # 評估模式
         self.clip_model.eval()
-        self.resnet_features.eval()
+        self.img_features.eval()
+
+        # 獲取嵌入大小
         dummy_input = torch.randn(1, 3, 224, 224).to(device)
-        self.img_model_embedding_size = self.resnet_features(dummy_input).shape[1]
+        self.img_model_embedding_size = self.img_features(dummy_input).shape[1]
         self.clip_model_embedding_size = self.clip_model.get_image_features(dummy_input).shape[1]
 
     def __len__(self):
         return len(self.dataset)
     
     def __getitem__(self, index):
-        img_data, label = self.dataset[index]
-        
-        # 處理不同數據集的圖像類型
-        if isinstance(img_data, np.ndarray):  # CIFAR圖像數組
-            img = Image.fromarray(img_data)
-        elif isinstance(img_data, Image.Image):  # Flickr30k已加載的PIL圖像
-            img = img_data
+        # 根據數據集類型獲取數據
+        if self.dataset_name == "flickr30k":
+            # 處理HuggingFace數據集格式（您的F30kDataset）
+            item = self.dataset['test'][index]
+            img = item["image"]  # PIL
+            # label = item["caption"][0]
+            label = item["caption"][item["caption"].index(min(item["caption"], key=len))] # 獲取最短的caption
         else:
-            raise TypeError("Unsupported image type")
+            # 處理CIFAR等其他數據集
+            img, label = self.dataset[index]
+            img = Image.fromarray(img) if isinstance(img, np.ndarray) else img
         
         # 獲取CLIP嵌入
         with torch.no_grad():
             clip_inputs = self.clip_processor(images=img, return_tensors="pt").to(self.device)
             clip_embedding = self.clip_model.get_image_features(**clip_inputs).squeeze()
-            # if self.dataset_name == 'flickr30k':
-            #     # get text features for Flickr30k
-        
+            if self.dataset_name == "flickr30k":
+                # get text embedding
+                text_inputs = self.clip_processor(text=label, return_tensors="pt").to(self.device)
+                label = self.clip_model.get_text_features(**text_inputs).squeeze()
+
         # 獲取ResNet嵌入
         resnet_img = self.img_model_transform(img).unsqueeze(0).to(self.device)
         with torch.no_grad():
-            resnet_embedding = self.resnet_features(resnet_img).squeeze()
+            img_embedding = self.img_features(resnet_img).squeeze()
 
-        return clip_embedding, resnet_embedding, label
+        return clip_embedding, img_embedding, label
 
 # test
 if __name__ == "__main__":
-    dataset = EmbeddingDataset("cifar10", "resnet50")
+    # dataset = EmbeddingDataset("cifar10", "resnet50")
+    dataset = EmbeddingDataset("flickr30k", "resnet50")
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
     print(f"CLIP Model Embedding Size: {dataset.clip_model_embedding_size}")
     print(f"ResNet Model Embedding Size: {dataset.img_model_embedding_size}")
     
-    for clip_embedding, resnet_embedding, label in dataloader:
+    for clip_embedding, img_embedding, label in dataloader:
         print(f"CLIP Embedding Shape: {clip_embedding.shape}")
-        print(f"ResNet Embedding Shape: {resnet_embedding.shape}")
+        print(f"ResNet Embedding Shape: {img_embedding.shape}")
         print(f"Label: {label}")
         break

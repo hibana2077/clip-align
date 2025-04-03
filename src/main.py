@@ -17,7 +17,8 @@ from clip_align.loss import AlignLoss
 from clip_align.vis import visualize_projection
 
 # Config
-DATASET_NAME = "cifar10"
+# DATASET_NAME = "cifar10"
+DATASET_NAME = "flickr30k"
 MODEL_NAME = "resnet18"
 # MODEL_NAME = "resnet50"
 
@@ -54,7 +55,9 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
             # 转换为张量
             clip_embeddings = torch.stack(clip_embeddings)
             resnet_embeddings = torch.stack(resnet_embeddings)
-            labels = torch.tensor(labels)
+            if DATASET_NAME != "flickr30k":
+                labels = torch.tensor(labels)
+            if DATASET_NAME == "flickr30k":
             
             # 保存缓存
             torch.save({
@@ -64,6 +67,9 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
             }, cache_file)
         
         # 创建新的TensorDataset
+        print(f"clip: {type(clip_embeddings)}")
+        print(f"img: {type(resnet_embeddings)}")
+        print(f"label: {type(labels)}")
         dataset = TensorDataset(clip_embeddings, resnet_embeddings, labels)
         clip_model_embedding_size = clip_embeddings.size(1)
         img_model_embedding_size = resnet_embeddings.size(1)

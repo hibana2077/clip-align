@@ -3,3 +3,4 @@ src/data/
 data/
 src/cache/
 src/clip_align/__pycache__/
+src.lock
