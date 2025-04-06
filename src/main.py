@@ -98,7 +98,7 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
     return train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size
 
 if __name__ == '__main__':
-    # 创建数据加载器
+    # Create dataset and dataloader
     train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size = get_dataloader(
         preload=True,
         cache_dir="./cache"
@@ -195,3 +195,6 @@ if __name__ == '__main__':
     visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
     visualize_projection(all_convert_embeddings, all_labels, save_name="convert_projection.png", label_type="tensor")
     visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
+
+    # Save the Converter model
+    torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")
