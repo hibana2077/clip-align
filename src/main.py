@@ -19,7 +19,9 @@ from clip_align.vis import visualize_projection, visualize_similarity
 # Config
 # DATASET_NAME = "cifar10"
 DATASET_NAME = "flickr30k"
-MODEL_NAME = "resnet18"
+# MODEL_NAME = "resnet18"
+MODEL_NAME = "dla34"
+# MODEL_NAME = "xception41"
 # MODEL_NAME = "resnet50"
 
 # 设置设备
@@ -138,7 +140,7 @@ if __name__ == '__main__':
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     # 训练模型
-    num_epochs = 100
+    num_epochs = 10
     for epoch in range(num_epochs):
         # Training
         converter.train()
@@ -212,9 +214,10 @@ if __name__ == '__main__':
     print(f"All Labels Shape: {all_labels.shape}")
     # 可视化
     visualize_projection(all_clip_embeddings, all_labels, save_name="clip_projection.png", label_type="tensor")
-    visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
     visualize_projection(all_convert_embeddings, all_labels, save_name="convert_projection.png", label_type="tensor")
-    visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
+    if all_resnet_embeddings.shape[-1] == 512:
+        visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
+        visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
 
     # Save the Converter model
     torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")

@@ -10,3 +10,5 @@ src/clip_projection.png
 src/resnet_projection.png
 src/similarity_similarity_distributions.png
 src/similarity_similarity_scatter.png
+src/converter_flickr30k_dla34.pth
+src/converter_flickr30k_xception41.pth

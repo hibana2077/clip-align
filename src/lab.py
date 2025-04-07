@@ -7,30 +7,23 @@ from transformers import CLIPProcessor, CLIPModel
 import timm
 import numpy as np
 from PIL import Image
-# from clip_align.flickr30k import FlickrDataset
 
-# dataset = FlickrDataset()
-# dataset.download_and_prepare()
-# dataset = dataset.as_dataset()
+model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-# # print(len(dataset))
-# print(dataset.keys())
-# print(len(dataset['test']))
-# print(dataset['test'][0])
-# from clip_align.dataset import EmbeddingDataset
-# dataset = EmbeddingDataset("flickr30k", "resnet50")
-# dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# print(f"ResNet Model Embedding Size: {dataset.img_model_embedding_size}")
-# print(f"CLIP Model Embedding Size: {dataset.clip_model_embedding_size}")
-    
-# for clip_embedding, resnet_embedding, label in dataloader:
-#     print(f"CLIP Embedding Shape: {clip_embedding.shape}")
-#     print(f"ResNet Embedding Shape: {resnet_embedding.shape}")
-#     print(f"Label: {label.shape}")
-#     break
+model.eval()
+model.to(device)
 
-caption = [ "Two young guys with shaggy hair look at their hands while hanging out in the yard.", "Two young, White males are outside near many bushes.", "Two men in green shirts are standing in a yard.", "A man in a blue shirt standing in a garden.", "Two friends enjoy time spent together." ]
-minidx = caption.index(min(caption, key=len))
-print(minidx)
-print(caption[minidx])
+test_img_tensor = torch.randn(600, 3, 224, 224).to(device)
+# test_text_tensor = torch.randn(600, 5, 77).to(device)
+test_text_tensor = torch.randint(0, 1000, (600, 77)).to(device)  # Dummy text tensor
+with torch.no_grad():
+    # Get image features
+    clip_image_embedding = model.get_image_features(test_img_tensor)
+    # Get text features
+    clip_text_embedding = model.get_text_features(test_text_tensor)
+
+print(clip_image_embedding.shape)  # Should be (600, 512)
+print(clip_text_embedding.shape)  # Should be (600, 512)
