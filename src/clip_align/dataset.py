@@ -41,9 +41,8 @@ class EmbeddingDataset(Dataset):
         self.image_features = timm.create_model(img_model, pretrained=True, num_classes=0).to(device)
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         
-        data_config = timm.data.resolve_model_data_config(self.image_features)
-
         # 設置轉換
+        data_config = timm.data.resolve_model_data_config(self.image_features)
         self.img_model_transform = img_model_transform or timm.data.create_transform(**data_config)
         
         # 評估模式
