@@ -63,7 +63,6 @@ class EmbeddingDataset(Dataset):
             # 處理HuggingFace數據集格式（您的F30kDataset）
             item = self.dataset['test'][index]
             img = item["image"]  # PIL
-            # label = item["caption"][0]
             label = item["caption"][item["caption"].index(min(item["caption"], key=len))] # 獲取最短的caption
         else:
             # 處理CIFAR等其他數據集
