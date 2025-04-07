@@ -38,11 +38,11 @@ class EmbeddingDataset(Dataset):
         self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
         # self.img_features = timm.create_model(img_model, pretrained=True).to(device)
         # self.img_features = torch.nn.Sequential(*list(self.img_features.children())[:-1])
-        self.image_features = timm.create_model(img_model, pretrained=True, num_classes=0).to(device)
+        self.img_features = timm.create_model(img_model, pretrained=True, num_classes=0).to(device)
         self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
         
         # 設置轉換
-        data_config = timm.data.resolve_model_data_config(self.image_features)
+        data_config = timm.data.resolve_model_data_config(self.img_features)
         self.img_model_transform = img_model_transform or timm.data.create_transform(**data_config)
         
         # 評估模式
@@ -50,8 +50,8 @@ class EmbeddingDataset(Dataset):
         self.img_features.eval()
 
         # 獲取嵌入大小
-        dummy_input = torch.randn(3, 224, 224).to(device)
-        self.img_model_embedding_size = self.img_features(self.img_model_transform(dummy_input).unsqueeze(0)).shape[1]
+        dummy_input = torch.randn(1, 3, 224, 224).to(device)
+        self.img_model_embedding_size = self.img_features(self.img_model_transform(dummy_input.squeeze(0)).unsqueeze(0)).shape[1]
         self.clip_model_embedding_size = self.clip_model.get_image_features(dummy_input).shape[1]
 
     def __len__(self):

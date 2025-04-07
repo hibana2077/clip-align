@@ -4,3 +4,9 @@ data/
 src/cache/
 src/clip_align/__pycache__/
 src.lock
+src/converter_flickr30k_resnet18.pth
+src/convert_projection.png
+src/clip_projection.png
+src/resnet_projection.png
+src/similarity_similarity_distributions.png
+src/similarity_similarity_scatter.png

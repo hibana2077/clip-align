@@ -134,12 +134,13 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(
         converter.parameters(), 
         lr=3e-4,
-        weight_decay=1e-4  # 添加L2正则化
+        weight_decay=1e-4
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     # 训练模型
     num_epochs = 100
     for epoch in range(num_epochs):
+        # Training
         converter.train()
         running_loss = 0.0
         for clip_embedding, resnet_embedding, label in tqdm(train_loader):
@@ -155,12 +156,28 @@ if __name__ == '__main__':
 
             running_loss += loss.item()
 
-        scheduler.step()
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}")
+        train_loss = running_loss / len(train_loader)
+        
+        # Validation after each epoch
+        converter.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for clip_embedding, resnet_embedding, label in val_loader:
+                clip_embedding = clip_embedding.to(device)
+                resnet_embedding = resnet_embedding.to(device)
+                label = label.to(device)
 
-    # 验证模型
+                output = converter(resnet_embedding)
+                loss = align_loss(output, clip_embedding)
+                val_loss += loss.item()
+        
+        val_loss /= len(val_loader)
+        scheduler.step()
+        
+        print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+
+    # Final comprehensive validation with embedding collection
     converter.eval()
-    val_loss = 0.0
     all_clip_embeddings = []
     all_resnet_embeddings = []
     all_convert_embeddings = []
@@ -173,19 +190,22 @@ if __name__ == '__main__':
             label = label.to(device)
 
             output = converter(resnet_embedding)
-            loss = align_loss(output, clip_embedding)
-            val_loss += loss.item()
-
+            
             all_clip_embeddings.append(clip_embedding.cpu())
             all_resnet_embeddings.append(resnet_embedding.cpu())
             all_convert_embeddings.append(output.cpu())
             all_labels.append(label.cpu())
-    val_loss /= len(val_loader)
-    print(f"Validation Loss: {val_loss:.4f}")
+
     all_clip_embeddings = torch.cat(all_clip_embeddings)
     all_resnet_embeddings = torch.cat(all_resnet_embeddings)
     all_convert_embeddings = torch.cat(all_convert_embeddings)
     all_labels = torch.cat(all_labels)
+
+    print(f"Final collected embeddings shapes:")
+    print(f"CLIP embeddings: {all_clip_embeddings.shape}")
+    print(f"ResNet embeddings: {all_resnet_embeddings.shape}")
+    print(f"Converted embeddings: {all_convert_embeddings.shape}")
+    print(f"Labels: {all_labels.shape}")
 
     print(f"All CLIP Embeddings Shape: {all_clip_embeddings.shape}")
     print(f"All ResNet Embeddings Shape: {all_resnet_embeddings.shape}")
