@@ -18,7 +18,8 @@ from clip_align.vis import visualize_projection, visualize_similarity
 
 # Config
 # DATASET_NAME = "cifar10"
-DATASET_NAME = "flickr30k"
+# DATASET_NAME = "flickr30k"
+DATASET_NAME = "mscoco"
 # MODEL_NAME = "resnet18"
 # MODEL_NAME = "dla34"
 # MODEL_NAME = "mobilenetv4_hybrid_medium"

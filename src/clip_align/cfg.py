@@ -3,4 +3,5 @@ DATASET_TYPE = {
     "flickr30k": ["T2I","I2T"],
     "imagenet1k": ["ZSC"],
     "urban1k": ["T2I","I2T"],
+    "mscoco": ["T2I","I2T"],
 }

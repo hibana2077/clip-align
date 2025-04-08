@@ -36,8 +36,10 @@ class EmbeddingDataset(Dataset):
                 index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",
                 split="train2017",
                 download=True,
-                cache_dir="./data/mscoco_cache"
+                cache_dir="./data/mscoco_cache",
+                sample=3000
             )
+            self.dataset.download_all(num_workers=8)
         else:
             # 處理CIFAR等其他數據集
             self.dataset_name = dataset
@@ -88,7 +90,7 @@ class EmbeddingDataset(Dataset):
             clip_embedding = self.clip_model.get_image_features(**clip_inputs).squeeze()
             if self.dataset_name == "flickr30k":
                 # get text embedding
-                text_inputs = self.clip_processor(text=label, return_tensors="pt").to(self.device)
+                text_inputs = self.clip_processor(text=label, return_tensors="pt", max_length=77, padding='max_length', truncation=True).to(self.device)
                 label = self.clip_model.get_text_features(**text_inputs).squeeze()
 
         # 獲取ResNet嵌入

@@ -23,7 +23,8 @@ from clip_align.converter import Converter, Converter_Att, Converter_Linear, Hil
 from clip_align.eval_utils import I2T, T2I
 
 # Config
-EVAL_DATASET_NAME = "urban1k"
+# EVAL_DATASET_NAME = "urban1k"
+EVAL_DATASET_NAME = "mscoco"
 DATASET_NAME = "flickr30k"
 # MODEL_NAME = "mobilenetv4_hybrid_medium"
 MODEL_NAME = "vit_xsmall_patch16_clip_224"
@@ -44,10 +45,12 @@ def load_test_data(dataset_name:str):
         test_dataset = MSCOCODataset(
             parquet_file_path="./data/mscoco_test2017.parquet",
             index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",
-            split="test2017",
+            split="train2017",
             download=True,
-            cache_dir="./data/mscoco_cache"
+            cache_dir="./data/mscoco_cache",
+            sample=1000
         )
+        test_dataset.download_all(num_workers=8)
     elif dataset_name == "flickr30k":
         test_dataset = FlickrDataset()
         test_dataset.download_and_prepare()
@@ -73,12 +76,20 @@ def preprocess_data(dataset, clip_processor, img_model_transform):
         img_images.append(img_image)
 
         # Preprocess text for CLIP
-        clip_text = clip_processor(text=text, return_tensors="pt", padding=True, truncation=True)["input_ids"]
+        clip_text = clip_processor(text=text, return_tensors="pt", max_length=77, padding='max_length', truncation=True)["input_ids"]
         clip_texts.append(clip_text)
 
     # Stack the tensors
     clip_images = torch.cat(clip_images, dim=0).to(device)
     img_images = torch.cat(img_images, dim=0).to(device)
+    print(len(clip_texts))
+    # stats tensor size clip_texts
+    cnt = {}
+    for i in range(len(clip_texts)):
+        if clip_texts[i].shape[1] not in cnt:
+            cnt[clip_texts[i].shape[1]] = 0
+        cnt[clip_texts[i].shape[1]] += 1
+    print(cnt)
     clip_texts = torch.cat(clip_texts, dim=0).to(device)
 
     return clip_images, img_images, clip_texts

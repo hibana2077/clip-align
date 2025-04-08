@@ -20,7 +20,6 @@ class Converter_Linear(nn.Module):
 class Converter(nn.Module):
     def __init__(self, input_dim=2048, output_dim=512, path1_hidden_dim=512, path2_hidden_dim=128, hidden_dim=256):
         super().__init__()
-        self.input_norm = nn.LayerNorm(input_dim)
         
         # Bilinear low-rank decomposition (reducing the number of paths)
         self.path1 = nn.Sequential(
@@ -31,7 +30,8 @@ class Converter(nn.Module):
         
         self.path2 = nn.Sequential(
             nn.Linear(input_dim, path2_hidden_dim),
-            # nn.GELU(),
+            nn.SiLU(inplace=True),
+            nn.Linear(path2_hidden_dim, path2_hidden_dim),
             nn.SiLU(inplace=True),
             nn.Linear(path2_hidden_dim, output_dim)
         )
@@ -44,10 +44,6 @@ class Converter(nn.Module):
         
         # Fusion layer with residual connection
         self.fusion = nn.Linear(input_dim + output_dim*2, output_dim)
-        
-        # Output normalization
-        # self.layer_norm = nn.LayerNorm(output_dim)
-        self.layer_norm = nn.GroupNorm(1, output_dim)
 
         # Initialize parameters
         self.apply(self._init_weights)
@@ -59,7 +55,7 @@ class Converter(nn.Module):
                 nn.init.zeros_(module.bias)
 
     def forward(self, x):
-        x_norm = self.input_norm(x)
+        x_norm = x
         
         # Gating weights
         gate_weights = F.softmax(self.gate(x_norm), dim=-1)
@@ -72,11 +68,8 @@ class Converter(nn.Module):
         # Weighted fusion
         combined = torch.cat([x_norm, out1*w1, out2*w2], dim=-1)
         fused = self.fusion(combined)
-        
-        # Final normalization
-        output = self.layer_norm(fused)
-        # return F.normalize(fused, p=2, dim=-1)
-        return output
+
+        return fused
 
 class ProjectionConverter(nn.Module):
     def __init__(self, input_dim=2048, output_dim=512, space_X_dim=783, space_Y_dim=783):

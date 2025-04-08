@@ -24,7 +24,8 @@ class MSCOCODataset(Dataset):
                  split='train2017', 
                  transform=None, 
                  download=True,
-                 cache_dir='./mscoco_cache'):
+                 cache_dir='./mscoco_cache',
+                 sample=None):
         """
         Args:
             parquet_file_path (str): Path to the parquet file containing URLs and text
@@ -33,6 +34,7 @@ class MSCOCODataset(Dataset):
             transform (callable, optional): Optional transform to be applied to the images
             download (bool): Whether to download the index file if not already available
             cache_dir (str): Directory to cache downloaded images
+            sample (int, optional): If provided, limit the dataset to this many samples
         """
         self.parquet_file_path = parquet_file_path
         self.index_url = index_url
@@ -54,6 +56,12 @@ class MSCOCODataset(Dataset):
         # Filter only the desired split
         self.df = self.df[self.df['URL'].str.contains(self.split)]
         print(f"Filtered to {len(self.df)} entries for split: {self.split}")
+        
+        # Sample the dataset if requested
+        self.sample = sample
+        if self.sample is not None and self.sample < len(self.df):
+            self.df = self.df.sample(self.sample, random_state=42)
+            print(f"Sampled to {len(self.df)} entries")
         
     def _download_index(self):
         """Download the index file if it doesn't exist"""
@@ -179,11 +187,12 @@ if __name__ == "__main__":
     # Create a dataset instance
     dataset = MSCOCODataset(
         parquet_file_path="mscoco.parquet",
-        index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",  # Replace with the actual URL
+        index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",
         split="train2017",
         transform=transform,
         download=True,
-        cache_dir="./mscoco_cache"
+        cache_dir="./mscoco_cache",
+        sample=1000  # Limit to 1000 samples for example
     )
     
     # Create a DataLoader
