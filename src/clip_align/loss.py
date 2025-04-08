@@ -2,6 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def coral_loss(x, y):
+    mean_x = x.mean(0)
+    mean_y = y.mean(0)
+    cov_x = torch.cov(x.T)
+    cov_y = torch.cov(y.T)
+    return F.mse_loss(mean_x, mean_y) + F.mse_loss(cov_x, cov_y)
+
 class SimilarityLoss(nn.Module):
     def __init__(self, mode='cosine', temperature=0.07):
         """
@@ -60,7 +67,7 @@ class AlignLoss(nn.Module):
             F.cross_entropy(sim_matrix.T, labels)
         ) / 2
         
-        return self.alpha * similarity_loss + (1 - self.alpha) * contrastive_loss
+        return self.alpha * similarity_loss + (1 - self.alpha) * contrastive_loss + coral_loss(pred, target)
 
 # Test example
 if __name__ == "__main__":

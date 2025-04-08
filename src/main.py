@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # self defined dataset
 from clip_align.dataset import EmbeddingDataset
-from clip_align.converter import Converter, Converter_Att, Converter_Linear
+from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.loss import AlignLoss
 from clip_align.vis import visualize_projection, visualize_similarity
 
@@ -20,9 +20,14 @@ from clip_align.vis import visualize_projection, visualize_similarity
 # DATASET_NAME = "cifar10"
 DATASET_NAME = "flickr30k"
 # MODEL_NAME = "resnet18"
-MODEL_NAME = "dla34"
-# MODEL_NAME = "xception41"
+# MODEL_NAME = "dla34"
+# MODEL_NAME = "mobilenetv4_hybrid_medium"
+MODEL_NAME = "vit_xsmall_patch16_clip_224"
+# MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
+# MODEL_NAME = "eva02_base_patch14_448"
+# MODEL_NAME = "nextvit_small"
 # MODEL_NAME = "resnet50"
+SPLIT_RATIO = 0.9
 
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -80,7 +85,7 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
         img_model_embedding_size = dataset.img_model_embedding_size
 
     # 划分数据集
-    train_size = int(0.8 * len(dataset))
+    train_size = int(SPLIT_RATIO * len(dataset))
     val_size = len(dataset) - train_size
     generator = torch.Generator().manual_seed(42)  # 固定随机种子
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
@@ -107,10 +112,28 @@ if __name__ == '__main__':
     )
     print(f"CLIP Model Embedding Size: {clip_model_embedding_size}")
     print(f"ResNet Model Embedding Size: {img_model_embedding_size}")
+
+    # Data stats
+    clip_embeddings_stats = []
+    resnet_embeddings_stats = []
+    labels_stats = []
+    for clip_embedding, resnet_embedding, label in tqdm(train_loader):
+        clip_embeddings_stats.append(clip_embedding)
+        resnet_embeddings_stats.append(resnet_embedding)
+        labels_stats.append(label)
+    clip_embeddings_stats = torch.cat(clip_embeddings_stats)
+    resnet_embeddings_stats = torch.cat(resnet_embeddings_stats)
+    labels_stats = torch.cat(labels_stats)
+    print(f"CLIP Embedding Stats: {clip_embeddings_stats.mean()}, {clip_embeddings_stats.std()}, {clip_embeddings_stats.min()}, {clip_embeddings_stats.max()}, {clip_embeddings_stats.median()}")
+    print(f"ResNet Embedding Stats: {resnet_embeddings_stats.mean()}, {resnet_embeddings_stats.std()}, {resnet_embeddings_stats.min()}, {resnet_embeddings_stats.max()}, {resnet_embeddings_stats.median()}")
+    print(f"Label Stats: {labels_stats.mean()}, {labels_stats.std()}, {labels_stats.min()}, {labels_stats.max()}, {labels_stats.median()}")
+
     # 测试数据加载器
     for clip_embedding, resnet_embedding, label in train_loader:
         print(f"CLIP Embedding Shape: {clip_embedding.shape}")
+        # print(f"CLIP Embedding Stats: {clip_embedding.mean()}, {clip_embedding.std()}, {clip_embedding.min()}, {clip_embedding.max()}, {clip_embedding.median()}")
         print(f"ResNet Embedding Shape: {resnet_embedding.shape}")
+        # print(f"ResNet Embedding Stats: {resnet_embedding.mean()}, {resnet_embedding.std()}, {resnet_embedding.min()}, {resnet_embedding.max()}, {resnet_embedding.median()}")
         print(f"Label: {label}")
         break
 
@@ -122,6 +145,12 @@ if __name__ == '__main__':
     
     # 创建模型
     converter = Converter(img_model_embedding_size, clip_model_embedding_size).to(device)
+    # converter = HilbertProjectionConverter(
+    #     img_model_embedding_size,
+    #     clip_model_embedding_size).to(device)
+    # converter = ProjectionConverter(
+    #     img_model_embedding_size,
+    #     clip_model_embedding_size).to(device)
     # converter = Converter_Att(
     #     img_model_embedding_size,
     #     clip_model_embedding_size,
@@ -132,15 +161,24 @@ if __name__ == '__main__':
     #     clip_model_embedding_size
     # ).to(device)
     print(f"Parameter Count: {sum(p.numel() for p in converter.parameters())/1e6:.2f}M")
-    align_loss = AlignLoss().to(device)
+    align_loss = AlignLoss(
+        alpha=0.5,
+        temperature=0.07,
+        similarity_mode='cosine',
+    ).to(device)
+    # align_loss = nn.MSELoss().to(device)
+    # align_loss = nn.L1Loss().to(device)
     optimizer = torch.optim.AdamW(
-        converter.parameters(), 
+        converter.parameters(),
         lr=3e-4,
-        weight_decay=1e-4
+        betas=(0.9, 0.98),
+        eps=1e-9,
+        weight_decay=3e-4
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     # 训练模型
-    num_epochs = 10
+    num_epochs = 50
+    best_val_loss = float('inf')
     for epoch in range(num_epochs):
         # Training
         converter.train()
@@ -151,8 +189,12 @@ if __name__ == '__main__':
             label = label.to(device)
 
             optimizer.zero_grad()
-            output = converter(resnet_embedding)
-            loss = align_loss(output, clip_embedding)
+            if isinstance(converter, HilbertProjectionConverter):
+                output, reg_loss = converter(resnet_embedding)
+                loss = align_loss(output, clip_embedding) + reg_loss
+            else:
+                output = converter(resnet_embedding)
+                loss = align_loss(output, clip_embedding)
             loss.backward()
             optimizer.step()
 
@@ -169,14 +211,24 @@ if __name__ == '__main__':
                 resnet_embedding = resnet_embedding.to(device)
                 label = label.to(device)
 
-                output = converter(resnet_embedding)
-                loss = align_loss(output, clip_embedding)
+                if isinstance(converter, HilbertProjectionConverter):
+                    output, reg_loss = converter(resnet_embedding)
+                    loss = align_loss(output, clip_embedding) + reg_loss
+                else:
+                    output = converter(resnet_embedding)
+                    loss = align_loss(output, clip_embedding)
                 val_loss += loss.item()
         
         val_loss /= len(val_loader)
         scheduler.step()
         
         print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            print(f"Best validation loss so far. Saving model...")
+            torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")
+        else:
+            print(f"Validation loss did not improve. Not saving model.")
 
     # Final comprehensive validation with embedding collection
     converter.eval()
@@ -191,7 +243,10 @@ if __name__ == '__main__':
             resnet_embedding = resnet_embedding.to(device)
             label = label.to(device)
 
-            output = converter(resnet_embedding)
+            if isinstance(converter, HilbertProjectionConverter):
+                output, reg_loss = converter(resnet_embedding)
+            else:
+                output = converter(resnet_embedding)
             
             all_clip_embeddings.append(clip_embedding.cpu())
             all_resnet_embeddings.append(resnet_embedding.cpu())
@@ -218,6 +273,3 @@ if __name__ == '__main__':
     if all_resnet_embeddings.shape[-1] == 512:
         visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
         visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
-
-    # Save the Converter model
-    torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")

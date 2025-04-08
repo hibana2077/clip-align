@@ -18,14 +18,18 @@ from clip_align.cfg import DATASET_TYPE
 from clip_align.infernece import original_clip_inference, converter_clip_inference
 from clip_align.flickr30k import FlickrDataset
 from clip_align.urban1k import Urban1k
-from clip_align.converter import Converter, Converter_Att, Converter_Linear
+from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.eval_utils import I2T, T2I
 
 # Config
 EVAL_DATASET_NAME = "urban1k"
 DATASET_NAME = "flickr30k"
-MODEL_NAME = "dla34"
+# MODEL_NAME = "mobilenetv4_hybrid_medium"
+MODEL_NAME = "vit_xsmall_patch16_clip_224"
+# MODEL_NAME = "eva02_base_patch14_448"
+# MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
+CONVERTER_MODEL_TYPE = Converter
 
 # Set Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -103,7 +107,7 @@ if __name__ == "__main__":
         clip_model_name="openai/clip-vit-base-patch32",
         cnn_model_name=MODEL_NAME,
         converter_model_path=CONVERTER_PT,
-        converter_model_type=Converter,
+        converter_model_type=CONVERTER_MODEL_TYPE,
         image_set=img_images,
         text_set=clip_texts,
         device=device
@@ -112,6 +116,7 @@ if __name__ == "__main__":
     print(f"clip_text_embedding: {clip_text_embedding.shape}")
 
     # Do evaluation
+    print(f"{'='*20} Eval {MODEL_NAME} on {EVAL_DATASET_NAME} {'='*20}")
     # I2T
     i2t_recall_original = I2T(clip_image_embedding, clip_text_embedding, topk=(1, 5, 10))
     i2t_recall_converter = I2T(converter_embedding, clip_text_embedding, topk=(1, 5, 10))
