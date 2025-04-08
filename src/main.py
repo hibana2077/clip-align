@@ -273,3 +273,6 @@ if __name__ == '__main__':
     if all_resnet_embeddings.shape[-1] == 512:
         visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
         visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
+
+    # Similarity
+    print(f"CLIP to Converted Similarity: {F.cosine_similarity(all_clip_embeddings, all_convert_embeddings).mean()}")
