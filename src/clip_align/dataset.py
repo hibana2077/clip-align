@@ -7,6 +7,7 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from transformers import CLIPModel, CLIPProcessor
 import datasets  # HuggingFace datasets
 from .flickr30k import FlickrDataset
+from .mscoco import MSCOCODataset
 import numpy as np
 
 DATASET_DICT = {
@@ -28,6 +29,15 @@ class EmbeddingDataset(Dataset):
             self.dataset = FlickrDataset()
             self.dataset.download_and_prepare()  # 需要手動下載和準備數據
             self.dataset = self.dataset.as_dataset()  # 轉換為可索引格式
+        elif dataset == "mscoco":
+            self.dataset_name = dataset
+            self.dataset = MSCOCODataset(
+                parquet_file_path="./data/mscoco_test2017.parquet",
+                index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",
+                split="train2017",
+                download=True,
+                cache_dir="./data/mscoco_cache"
+            )
         else:
             # 處理CIFAR等其他數據集
             self.dataset_name = dataset
@@ -64,6 +74,9 @@ class EmbeddingDataset(Dataset):
             item = self.dataset['test'][index]
             img = item["image"]  # PIL
             label = item["caption"][item["caption"].index(min(item["caption"], key=len))] # 獲取最短的caption
+        elif self.dataset_name == "mscoco":
+            # 處理HuggingFace數據集格式（您的MSCOCODataset）
+            img, label = self.dataset[index] # PIL, str
         else:
             # 處理CIFAR等其他數據集
             img, label = self.dataset[index]
