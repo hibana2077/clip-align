@@ -23,11 +23,12 @@ from clip_align.converter import Converter, Converter_Att, Converter_Linear, Hil
 from clip_align.eval_utils import I2T, T2I
 
 # Config
-# EVAL_DATASET_NAME = "urban1k"
-EVAL_DATASET_NAME = "mscoco"
-DATASET_NAME = "flickr30k"
-# MODEL_NAME = "mobilenetv4_hybrid_medium"
-MODEL_NAME = "vit_xsmall_patch16_clip_224"
+EVAL_DATASET_NAME = "urban1k"
+# EVAL_DATASET_NAME = "mscoco"
+# DATASET_NAME = "flickr30k"
+DATASET_NAME = "mscoco"
+MODEL_NAME = "mobilenetv4_hybrid_medium"
+# MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "eva02_base_patch14_448"
 # MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
@@ -48,9 +49,9 @@ def load_test_data(dataset_name:str):
             split="train2017",
             download=True,
             cache_dir="./data/mscoco_cache",
-            sample=1000
+            sample=2000
         )
-        test_dataset.download_all(num_workers=8)
+        test_dataset.download_all(num_workers=32)
     elif dataset_name == "flickr30k":
         test_dataset = FlickrDataset()
         test_dataset.download_and_prepare()

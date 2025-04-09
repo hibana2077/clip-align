@@ -59,7 +59,7 @@ def converter_clip_inference(
 
     # Do the inference
     with torch.no_grad():
-        batch_size = 64
+        batch_size = 32
         converter_embedding_list = []
         clip_text_embedding_list = []
         

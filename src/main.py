@@ -22,8 +22,8 @@ from clip_align.vis import visualize_projection, visualize_similarity
 DATASET_NAME = "mscoco"
 # MODEL_NAME = "resnet18"
 # MODEL_NAME = "dla34"
-# MODEL_NAME = "mobilenetv4_hybrid_medium"
-MODEL_NAME = "vit_xsmall_patch16_clip_224"
+MODEL_NAME = "mobilenetv4_hybrid_medium"
+# MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 # MODEL_NAME = "eva02_base_patch14_448"
 # MODEL_NAME = "nextvit_small"
@@ -35,63 +35,48 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 
 def get_dataloader(batch_size=128, preload=True, cache_dir=None):
-    # 加载原始数据集
-    dataset = EmbeddingDataset(DATASET_NAME, MODEL_NAME)
+    # Load the original dataset and set the batch size
+    processing_batch_size = 300  # Batch size for preprocessing
+    dataset = EmbeddingDataset(DATASET_NAME, MODEL_NAME, batch_size=processing_batch_size)
     
-    # 预加载数据到内存并支持缓存
-    if preload and cache_dir is not None:
+    # Get embedding sizes
+    clip_model_embedding_size = dataset.clip_model_embedding_size
+    img_model_embedding_size = dataset.img_model_embedding_size
+
+    # Already preloaded into memory, supports caching
+    if cache_dir is not None:
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = os.path.join(cache_dir, f"{DATASET_NAME}_{MODEL_NAME}_cache.pt")
         
-        # Check if cache file exists
-        if os.path.exists(cache_file):
+        # Check if the cache file exists
+        if os.path.exists(cache_file) and preload:
             print("Loading data from cache...")
             loaded = torch.load(cache_file)
             clip_embeddings = loaded['clip_embeddings']
             resnet_embeddings = loaded['resnet_embeddings']
             labels = loaded['labels']
-
-        else:
-            print("Preloading data and saving to cache...")
-            clip_embeddings = []
-            resnet_embeddings = []
-            labels = []
-            for clip_emb, resnet_emb, label in tqdm(dataset, desc="Preloading data"):
-                clip_embeddings.append(clip_emb)
-                resnet_embeddings.append(resnet_emb)
-                labels.append(label)
             
-            # 转换为张量
-            clip_embeddings = torch.stack(clip_embeddings)
-            resnet_embeddings = torch.stack(resnet_embeddings)
-            labels = torch.stack(labels)
+            # Create a new TensorDataset
+            dataset = TensorDataset(clip_embeddings, resnet_embeddings, labels)
+        else:
+            print("Using preprocessed dataset...")
+            # Save the embeddings to cache
+            if preload:
+                torch.save({
+                    'clip_embeddings': dataset.clip_embeddings,
+                    'resnet_embeddings': dataset.img_embeddings,
+                    'labels': dataset.text_embeddings,
+                }, cache_file)
+                print(f"Cache saved to {cache_file}")
 
-            # 保存缓存
-            torch.save({
-                'clip_embeddings': clip_embeddings,
-                'resnet_embeddings': resnet_embeddings,
-                'labels': labels,
-            }, cache_file)
-        
-        # 创建新的TensorDataset
-        print(f"clip: {type(clip_embeddings)}")
-        print(f"img: {type(resnet_embeddings)}")
-        print(f"label: {type(labels)}")
-        dataset = TensorDataset(clip_embeddings, resnet_embeddings, labels)
-        clip_model_embedding_size = clip_embeddings.size(1)
-        img_model_embedding_size = resnet_embeddings.size(1)
-    else:
-        # 从原始数据集获取尺寸
-        clip_model_embedding_size = dataset.clip_model_embedding_size
-        img_model_embedding_size = dataset.img_model_embedding_size
-
-    # 划分数据集
+    # Split the dataset
+    print(len(dataset))
     train_size = int(SPLIT_RATIO * len(dataset))
     val_size = len(dataset) - train_size
-    generator = torch.Generator().manual_seed(42)  # 固定随机种子
+    generator = torch.Generator().manual_seed(42)  # Fix random seed
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
     
-    # 创建DataLoader
+    # Create DataLoaders
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -108,7 +93,7 @@ def get_dataloader(batch_size=128, preload=True, cache_dir=None):
 if __name__ == '__main__':
     # Create dataset and dataloader
     train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size = get_dataloader(
-        preload=True,
+        preload=False,
         cache_dir="./cache"
     )
     print(f"CLIP Model Embedding Size: {clip_model_embedding_size}")
