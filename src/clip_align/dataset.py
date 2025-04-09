@@ -40,9 +40,9 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=40000
+                sample=50000
             )
-            self.dataset.download_all(num_workers=32)
+            self.dataset.download_all(num_workers=8)
         else:
             # 處理CIFAR等其他數據集
             self.dataset_name = dataset
