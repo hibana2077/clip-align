@@ -24,20 +24,26 @@ from clip_align.eval_utils import I2T, T2I
 
 # Config
 EVAL_DATASET_NAME = "urban1k"
+
 # EVAL_DATASET_NAME = "mscoco"
 # DATASET_NAME = "flickr30k"
 DATASET_NAME = "mscoco"
+
 # MODEL_NAME = "resnet18"
 # MODEL_NAME = "resnet50"
 # MODEL_NAME = "mobilenetv4_hybrid_medium"
-MODEL_NAME = "vit_xsmall_patch16_clip_224"
+# MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "eva02_base_patch14_448"
 # MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
+MODEL_NAME = "xception41"
+
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
+
 # CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
+
 CONVERTER_MODEL_TYPE = Converter
 # CONVERTER_MODEL_TYPE = HilbertProjectionConverter
 
