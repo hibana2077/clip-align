@@ -34,6 +34,10 @@ DATASET_NAME = "mscoco"
 # MODEL_NAME = "eva02_base_patch14_448"
 MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
+# CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
+CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
+# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
+# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
 CONVERTER_MODEL_TYPE = Converter
 
 # Set Device
@@ -102,7 +106,7 @@ if __name__ == "__main__":
     test_dataset, tasks = load_test_data(EVAL_DATASET_NAME)
 
     # Load CLIP model
-    clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
     
     # Load CNN model
     img_model = timm.create_model(MODEL_NAME, pretrained=True, num_classes=0)
@@ -117,7 +121,7 @@ if __name__ == "__main__":
 
     # Do the inference (Original CLIP)
     clip_image_embedding, clip_text_embedding = original_clip_inference(
-        model_name="openai/clip-vit-base-patch32",
+        model_name=CLIP_MODEL_NAME,
         image_set=clip_images,
         text_set=clip_texts,
         device=device
@@ -127,7 +131,7 @@ if __name__ == "__main__":
 
     # Do the inference (Converter)
     converter_embedding, clip_text_embedding = converter_clip_inference(
-        clip_model_name="openai/clip-vit-base-patch32",
+        clip_model_name=CLIP_MODEL_NAME,
         cnn_model_name=MODEL_NAME,
         converter_model_path=CONVERTER_PT,
         converter_model_type=CONVERTER_MODEL_TYPE,

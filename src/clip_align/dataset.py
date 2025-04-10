@@ -18,7 +18,7 @@ DATASET_DICT = {
 }
 
 class EmbeddingDataset(Dataset):
-    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, batch_size=512, **kwargs):
+    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, batch_size=512, clip_model_name = "openai/clip-vit-base-patch32", **kwargs):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
@@ -40,7 +40,7 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=50000
+                sample=1000
             )
             self.dataset.download_all(num_workers=8)
         else:
@@ -50,9 +50,9 @@ class EmbeddingDataset(Dataset):
             self.dataset = list(zip(self.dataset.data, self.dataset.targets))
         
         # 初始化模型
-        self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
+        self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
         self.img_features = timm.create_model(img_model, pretrained=True, num_classes=0).to(device)
-        self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        self.clip_processor = CLIPProcessor.from_pretrained(clip_model_name)
         
         # 設置轉換
         data_config = timm.data.resolve_model_data_config(self.img_features)

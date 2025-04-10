@@ -30,6 +30,11 @@ MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 # MODEL_NAME = "resnet50"
 SPLIT_RATIO = 0.9
 
+# CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
+CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
+# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
+# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
+
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
@@ -37,7 +42,10 @@ print(f"Device: {device}")
 def get_dataloader(batch_size=128, preload=True, cache_dir=None):
     # Load the original dataset and set the batch size
     processing_batch_size = 300  # Batch size for preprocessing
-    dataset = EmbeddingDataset(DATASET_NAME, MODEL_NAME, batch_size=processing_batch_size)
+    dataset = EmbeddingDataset(DATASET_NAME,
+                               MODEL_NAME,
+                               batch_size=processing_batch_size,
+                               clip_model_name=CLIP_MODEL_NAME)
     
     # Get embedding sizes
     clip_model_embedding_size = dataset.clip_model_embedding_size
