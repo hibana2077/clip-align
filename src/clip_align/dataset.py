@@ -40,7 +40,7 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=5000
+                sample=50000
             )
             self.dataset.download_all(num_workers=8)
         else:
