@@ -27,12 +27,12 @@ EVAL_DATASET_NAME = "urban1k"
 # EVAL_DATASET_NAME = "mscoco"
 # DATASET_NAME = "flickr30k"
 DATASET_NAME = "mscoco"
-MODEL_NAME = "resnet18"
+# MODEL_NAME = "resnet18"
 # MODEL_NAME = "resnet50"
 # MODEL_NAME = "mobilenetv4_hybrid_medium"
 # MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "eva02_base_patch14_448"
-# MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
+MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
 CONVERTER_MODEL_TYPE = Converter
 
