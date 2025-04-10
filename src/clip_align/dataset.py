@@ -40,7 +40,7 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=50000
+                sample=5000
             )
             self.dataset.download_all(num_workers=8)
         else:
@@ -91,9 +91,6 @@ class EmbeddingDataset(Dataset):
             # 收集當前批次的數據
             for idx in range(start_idx, end_idx):
                 if self.dataset_name == "flickr30k":
-                    # item = self.dataset[idx]
-                    # img = item["image"]  # PIL
-                    # text = item["caption"][item["caption"].index(min(item["caption"], key=len))]  # 獲取最短的caption
                     img = self.dataset['image'][idx]  # PIL
                     text = self.dataset['caption'][idx][0]
                 elif self.dataset_name == "mscoco":

@@ -1,20 +1,19 @@
 import os
+import requests
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from PIL import Image
-import requests
 from io import BytesIO
-from tqdm import tqdm
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
-import re
-
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
+import zipfile
+import shutil
 
 class MSCOCODataset(Dataset):
     """
-    A PyTorch Dataset for MSCOCO images downloaded from URLs.
+    A PyTorch Dataset for MSCOCO images downloaded from the official zip files.
     The dataset handles images from train2017, test2017, and val2017 splits.
     """
     
@@ -32,7 +31,7 @@ class MSCOCODataset(Dataset):
             index_url (str): URL to download the index file
             split (str): One of 'train2017', 'test2017', 'val2017'
             transform (callable, optional): Optional transform to be applied to the images
-            download (bool): Whether to download the index file if not already available
+            download (bool): Whether to download the index file and images if not already available
             cache_dir (str): Directory to cache downloaded images
             sample (int, optional): If provided, limit the dataset to this many samples
         """
@@ -43,11 +42,18 @@ class MSCOCODataset(Dataset):
         self.cache_dir = cache_dir
         
         # Create cache directory if it doesn't exist
-        os.makedirs(os.path.join(self.cache_dir, self.split), exist_ok=True)
+        os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Set the official MSCOCO zip URL based on the split
+        self.zip_url = f"http://images.cocodataset.org/zips/{self.split}.zip"
+        self.images_dir = os.path.join(self.cache_dir, self.split)
         
         # Download index if needed
         if download:
             self._download_index()
+            
+            # Download and extract MSCOCO zip file if needed
+            self._download_and_extract_zip()
         
         # Load the parquet file
         self.df = pd.read_parquet(parquet_file_path)
@@ -77,53 +83,65 @@ class MSCOCODataset(Dataset):
         else:
             print(f"Index file already exists at {self.parquet_file_path}")
     
+    def _download_and_extract_zip(self):
+        """Download and extract the official MSCOCO zip file if it doesn't exist"""
+        # Check if images directory already exists and has content
+        if os.path.exists(self.images_dir) and os.listdir(self.images_dir):
+            print(f"Images for {self.split} already exist in {self.images_dir}")
+            return
+        
+        # Create a temporary directory for the zip file
+        zip_dir = os.path.join(self.cache_dir, "zip")
+        os.makedirs(zip_dir, exist_ok=True)
+        zip_path = os.path.join(zip_dir, f"{self.split}.zip")
+        
+        # Download the zip file if it doesn't exist
+        if not os.path.exists(zip_path):
+            print(f"Downloading {self.split} zip from {self.zip_url}...")
+            # Stream the download to handle large files
+            with requests.get(self.zip_url, stream=True) as response:
+                if response.status_code == 200:
+                    total_size = int(response.headers.get('content-length', 0))
+                    with open(zip_path, 'wb') as f:
+                        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Downloading {self.split}.zip") as pbar:
+                            for chunk in response.iter_content(chunk_size=8192):
+                                if chunk:
+                                    f.write(chunk)
+                                    pbar.update(len(chunk))
+                    print(f"Downloaded {self.split}.zip to {zip_path}")
+                else:
+                    raise RuntimeError(f"Failed to download zip, status code: {response.status_code}")
+        else:
+            print(f"Zip file already exists at {zip_path}")
+        
+        # Extract the zip file
+        print(f"Extracting {self.split}.zip to {self.cache_dir}...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(self.cache_dir)
+        print(f"Extracted {self.split}.zip to {self.cache_dir}")
+        
+        # Optional: Remove the zip file to save space
+        # os.remove(zip_path)
+        # print(f"Removed zip file {zip_path}")
+    
     def _get_image_filename(self, url):
         """Extract the image filename from the URL"""
         parsed_url = urlparse(url)
         filename = os.path.basename(parsed_url.path)
         return filename
     
-    def _download_image(self, url):
-        """Download an image from a URL and convert to PIL Image"""
-        try:
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                return Image.open(BytesIO(response.content)).convert('RGB')
-            else:
-                print(f"Failed to download image from {url}, status code: {response.status_code}")
-                return None
-        except Exception as e:
-            print(f"Error downloading image from {url}: {e}")
-            return None
-    
-    def _get_cached_image_path(self, url):
-        """Get the path where the image should be cached"""
-        filename = self._get_image_filename(url)
-        return os.path.join(self.cache_dir, self.split, filename)
-    
     def _get_image(self, url):
-        """Get an image either from cache or by downloading"""
-        cache_path = self._get_cached_image_path(url)
+        """Get an image from the extracted zip directory"""
+        filename = self._get_image_filename(url)
+        image_path = os.path.join(self.images_dir, filename)
         
-        # If the image is cached, load it from disk
-        if os.path.exists(cache_path):
-            try:
-                return Image.open(cache_path).convert('RGB')
-            except Exception as e:
-                print(f"Error loading cached image {cache_path}: {e}")
-                # If there's an error loading the cached image, try downloading it again
-                
-        # If not cached or failed to load from cache, download it
-        img = self._download_image(url)
-        
-        # Cache the downloaded image
-        if img is not None:
-            try:
-                img.save(cache_path)
-            except Exception as e:
-                print(f"Error saving image to cache {cache_path}: {e}")
-                
-        return img
+        try:
+            # Load the image from the extracted directory
+            return Image.open(image_path).convert('RGB')
+        except Exception as e:
+            print(f"Error loading image {image_path}: {e}")
+            # Return a placeholder image if there's an error
+            return Image.new('RGB', (224, 224), color=(128, 128, 128))
     
     def __len__(self):
         """Return the number of images in the dataset"""
@@ -149,29 +167,19 @@ class MSCOCODataset(Dataset):
         # Get the image
         img = self._get_image(url)
         
-        # If image download failed, return a placeholder image
-        if img is None:
-            img = Image.new('RGB', (224, 224), color=(128, 128, 128))
-        
         # Apply transformations if provided
         if self.transform:
             img = self.transform(img)
             
         return img, text
     
-    def download_all(self, num_workers=4):
+    def download_all(self, num_workers=2):
         """
-        Download all images in the dataset to cache
-        
-        Args:
-            num_workers (int): Number of threads to use for downloading
+        Ensure all images in the dataset are available
+        This is now a simple wrapper around the zip download and extract method
         """
-        urls = self.df['URL'].tolist()
-        print(f"Downloading {len(urls)} images with {num_workers} workers...")
-        
-        with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            list(tqdm(executor.map(self._get_image, urls), total=len(urls)))
-
+        self._download_and_extract_zip()
+        print(f"All images for {self.split} are available in {self.images_dir}")
 
 # Example usage:
 if __name__ == "__main__":
