@@ -3,6 +3,8 @@
 ## Code implementation
 
 - Evaluate different datasets
+    - Urban1k
+    - Docci
     - Flickr30k
     - CIFAR-100
     - [ImageNet-1k](https://huggingface.co/datasets/ILSVRC/imagenet-1k)
