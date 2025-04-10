@@ -10,6 +10,9 @@ import datasets  # HuggingFace datasets
 from .flickr30k import FlickrDataset
 from .mscoco import MSCOCODataset
 import numpy as np
+import os
+import pickle
+import hashlib
 
 DATASET_DICT = {
     "cifar10": CIFAR10,
@@ -18,11 +21,17 @@ DATASET_DICT = {
 }
 
 class EmbeddingDataset(Dataset):
-    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, batch_size=512, clip_model_name = "openai/clip-vit-base-patch32", **kwargs):
+    def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, batch_size=512, clip_model_name="openai/clip-vit-base-patch32", use_cache=True, cache_dir="./cache", **kwargs):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
         self.batch_size = batch_size
+        self.use_cache = use_cache
+        self.cache_dir = cache_dir
+        self.clip_model_name = clip_model_name
+
+        if self.use_cache:
+            os.makedirs(self.cache_dir, exist_ok=True)
 
         # 初始化數據集
         if dataset == "flickr30k":
@@ -32,6 +41,7 @@ class EmbeddingDataset(Dataset):
             self.dataset.download_and_prepare()  # 需要手動下載和準備數據
             self.dataset = self.dataset.as_dataset()  # 轉換為可索引格式
             self.dataset = self.dataset['test'][:30000]
+            self.dataset_size = len(self.dataset['image'])
         elif dataset == "mscoco":
             self.dataset_name = dataset
             self.dataset = MSCOCODataset(
@@ -40,14 +50,16 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=1000
+                sample=10000
             )
             self.dataset.download_all(num_workers=8)
+            self.dataset_size = len(self.dataset)
         else:
             # 處理CIFAR等其他數據集
             self.dataset_name = dataset
             self.dataset = DATASET_DICT[dataset](root="./data", train=True, download=True)
             self.dataset = list(zip(self.dataset.data, self.dataset.targets))
+            self.dataset_size = len(self.dataset)
         
         # 初始化模型
         self.clip_model = CLIPModel.from_pretrained(clip_model_name).to(device)
@@ -70,12 +82,60 @@ class EmbeddingDataset(Dataset):
         # 預處理數據
         self.preprocess_dataset()
 
+    def _get_cache_path(self, data_type):
+        """Generate a cache file path based on dataset and model info"""
+        cache_key = f"{self.dataset_name}_{self.clip_model_name.replace('/', '_')}_{data_type}_{self.dataset_size}"
+        if hasattr(self, 'img_features') and data_type == "img_embeddings":
+            cache_key += f"_{self.img_features.__class__.__name__}"
+        
+        cache_key = hashlib.md5(cache_key.encode()).hexdigest()
+        return os.path.join(self.cache_dir, f"{cache_key}.pkl")
+
+    def _load_cache(self, cache_path):
+        """Load cached embeddings if they exist"""
+        if os.path.exists(cache_path):
+            print(f"Loading cached embeddings from {cache_path}")
+            with open(cache_path, 'rb') as f:
+                return pickle.load(f)
+        return None
+
+    def _save_cache(self, data, cache_path):
+        """Save embeddings to cache"""
+        print(f"Saving embeddings to cache: {cache_path}")
+        with open(cache_path, 'wb') as f:
+            pickle.dump(data, f)
+
     def preprocess_dataset(self):
-        """預處理整個數據集並將嵌入存儲在內存中"""
+        """預處理整個數據集並將嵌入存儲在內存中，使用緩存機制"""
         print(f"預處理數據集 {self.dataset_name}...")
-        self.clip_embeddings = []
+        
+        clip_cache_path = self._get_cache_path("clip_embeddings")
+        img_cache_path = self._get_cache_path("img_embeddings")
+        text_cache_path = self._get_cache_path("text_embeddings")
+        
+        # Try to load from cache
+        if self.use_cache:
+            self.clip_embeddings = self._load_cache(clip_cache_path)
+            self.img_embeddings = self._load_cache(img_cache_path)
+            self.text_embeddings = self._load_cache(text_cache_path)
+            
+            # If all cache loaded successfully
+            if all(x is not None for x in [self.clip_embeddings, self.img_embeddings, self.text_embeddings]):
+                print("Successfully loaded all embeddings from cache.")
+                return
+        
+        # Initialize embeddings lists and set flags for what needs processing
+        self.clip_embeddings_cached = self.clip_embeddings is not None
+        self.text_embeddings_cached = self.text_embeddings is not None
+        
+        # Initialize empty lists for embeddings that need processing
+        if not self.clip_embeddings_cached:
+            self.clip_embeddings = []
+        if not self.text_embeddings_cached:
+            self.text_embeddings = []
+        
+        # Always process img_embeddings as they may need to be recalculated
         self.img_embeddings = []
-        self.text_embeddings = []
         
         # 計算批次數
         total_samples = len(self.dataset['image']) if self.dataset_name == "flickr30k" else len(self.dataset)
@@ -103,43 +163,69 @@ class EmbeddingDataset(Dataset):
                 batch_imgs.append(img)
                 batch_texts.append(text)
             
-            # 批次處理圖像嵌入
-            batch_clip_embeddings, batch_img_embeddings, batch_text_embeddings = self.process_batch(batch_imgs, batch_texts)
+            # Process embeddings as needed
+            batch_clip_embeddings, batch_img_embeddings, batch_text_embeddings = self.process_batch(
+                batch_imgs, 
+                batch_texts, 
+                process_clip=not self.clip_embeddings_cached,
+                process_text=not self.text_embeddings_cached
+            )
             
-            # 擴展嵌入列表
-            self.clip_embeddings.extend(batch_clip_embeddings)
+            # Add embeddings only if they were processed
+            if not self.clip_embeddings_cached:
+                self.clip_embeddings.extend(batch_clip_embeddings)
+            if not self.text_embeddings_cached:
+                self.text_embeddings.extend(batch_text_embeddings)
+                
+            # Always add img embeddings
             self.img_embeddings.extend(batch_img_embeddings)
-            self.text_embeddings.extend(batch_text_embeddings)
         
-        # 轉換為張量
-        self.clip_embeddings = torch.stack(self.clip_embeddings)
+        # Convert to tensor if newly processed
+        if not self.clip_embeddings_cached:
+            self.clip_embeddings = torch.stack(self.clip_embeddings)
+            if self.use_cache:
+                self._save_cache(self.clip_embeddings, clip_cache_path)
+                
+        if not self.text_embeddings_cached:
+            self.text_embeddings = torch.stack(self.text_embeddings) if isinstance(self.text_embeddings[0], torch.Tensor) else torch.tensor(self.text_embeddings)
+            if self.use_cache:
+                self._save_cache(self.text_embeddings, text_cache_path)
+        
+        # Always save img embeddings
         self.img_embeddings = torch.stack(self.img_embeddings)
-        self.text_embeddings = torch.stack(self.text_embeddings)
+        if self.use_cache:
+            self._save_cache(self.img_embeddings, img_cache_path)
         
         print(f"預處理完成。數據集大小: {len(self.clip_embeddings)}")
 
-    def process_batch(self, batch_imgs, batch_texts):
+    def process_batch(self, batch_imgs, batch_texts, process_clip=True, process_text=True):
         """批次處理圖像和文本以獲取嵌入"""
-        # 處理CLIP圖像嵌入
-        with torch.no_grad():
-            clip_inputs = self.clip_processor(images=batch_imgs, return_tensors="pt", padding=True).to(self.device)
-            clip_embeddings = self.clip_model.get_image_features(**clip_inputs)
-            
-            # 處理文本嵌入（如果適用）
-            if self.dataset_name in ["flickr30k", "mscoco"]:
-                text_inputs = self.clip_processor(
-                    text=batch_texts, 
-                    return_tensors="pt", 
-                    max_length=77, 
-                    padding='max_length', 
-                    truncation=True
-                ).to(self.device)
-                text_embeddings = self.clip_model.get_text_features(**text_inputs)
-            else:
-                # 對於其他數據集，只需使用標籤
-                text_embeddings = torch.tensor([int(t) for t in batch_texts]).to(self.device)
+        clip_embeddings_list = []
+        text_embeddings_list = []
         
-        # 處理模型特定圖像嵌入
+        # 處理CLIP圖像嵌入和文本嵌入
+        if process_clip or process_text:
+            with torch.no_grad():
+                if process_clip:
+                    clip_inputs = self.clip_processor(images=batch_imgs, return_tensors="pt", padding=True).to(self.device)
+                    clip_embeddings = self.clip_model.get_image_features(**clip_inputs)
+                    clip_embeddings_list = [emb.cpu() for emb in clip_embeddings]
+                
+                if process_text:
+                    if self.dataset_name in ["flickr30k", "mscoco"]:
+                        text_inputs = self.clip_processor(
+                            text=batch_texts, 
+                            return_tensors="pt", 
+                            max_length=77, 
+                            padding='max_length', 
+                            truncation=True
+                        ).to(self.device)
+                        text_embeddings = self.clip_model.get_text_features(**text_inputs)
+                        text_embeddings_list = [emb.cpu() for emb in text_embeddings]
+                    else:
+                        text_embeddings_list = [torch.tensor([int(t)], device="cpu") for t in batch_texts]
+        
+        # 處理模型特定圖像嵌入 (always process)
         batch_transformed_imgs = []
         for img in batch_imgs:
             batch_transformed_imgs.append(self.img_model_transform(img))
@@ -149,14 +235,7 @@ class EmbeddingDataset(Dataset):
         with torch.no_grad():
             img_embeddings = self.img_features(batch_transformed_imgs)
         
-        # 拆分批次嵌入為單獨的嵌入
-        clip_embeddings_list = [emb for emb in clip_embeddings]
-        img_embeddings_list = [emb for emb in img_embeddings]
-        
-        if self.dataset_name in ["flickr30k", "mscoco"]:
-            text_embeddings_list = [emb for emb in text_embeddings]
-        else:
-            text_embeddings_list = [torch.tensor([int(t)], device=self.device) for t in batch_texts]
+        img_embeddings_list = [emb.cpu() for emb in img_embeddings]
         
         return clip_embeddings_list, img_embeddings_list, text_embeddings_list
 
@@ -165,9 +244,9 @@ class EmbeddingDataset(Dataset):
     
     def __getitem__(self, index):
         """直接從預計算的嵌入中獲取項目"""
-        clip_embedding = self.clip_embeddings[index]
-        img_embedding = self.img_embeddings[index]
-        label = self.text_embeddings[index]
+        clip_embedding = self.clip_embeddings[index].to(self.device)
+        img_embedding = self.img_embeddings[index].to(self.device)
+        label = self.text_embeddings[index].to(self.device)
         
         return clip_embedding, img_embedding, label
 

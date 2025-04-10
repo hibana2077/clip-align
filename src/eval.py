@@ -39,6 +39,7 @@ CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
 CONVERTER_MODEL_TYPE = Converter
+# CONVERTER_MODEL_TYPE = HilbertProjectionConverter
 
 # Set Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

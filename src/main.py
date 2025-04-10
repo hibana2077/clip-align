@@ -171,7 +171,7 @@ if __name__ == '__main__':
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
     # 训练模型
-    num_epochs = 50
+    num_epochs = 100
     best_val_loss = float('inf')
     for epoch in range(num_epochs):
         # Training
@@ -264,7 +264,7 @@ if __name__ == '__main__':
     # 可视化
     visualize_projection(all_clip_embeddings, all_labels, save_name="clip_projection.png", label_type="tensor")
     visualize_projection(all_convert_embeddings, all_labels, save_name="convert_projection.png", label_type="tensor")
-    if all_resnet_embeddings.shape[-1] == 512:
+    if all_resnet_embeddings.shape[-1] == all_labels.shape[-1]:
         visualize_projection(all_resnet_embeddings, all_labels, save_name="resnet_projection.png", label_type="tensor")
         visualize_similarity(all_clip_embeddings, all_resnet_embeddings, all_convert_embeddings, save_prefix="similarity")
 
