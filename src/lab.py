@@ -8,8 +8,16 @@ import timm
 import numpy as np
 from PIL import Image
 
-img_model = timm.create_model("vit_xsmall_patch16_clip_224", pretrained=True, num_classes=0)
-print(img_model)
-test = torch.randn(1, 3, 224, 224)
-out = img_model(test)
-print(out.shape)
+from datasets import load_dataset
+
+# ds = load_dataset("pixparse/cc3m-wds")
+ds = load_dataset("julianmoraes/doodles-captions-manual", split="train")
+print(ds)
+print(ds.to_dict().keys())
+print(len(ds.to_dict()['image']))
+print(len(ds.to_dict()['text']))
+print(type(ds.to_dict()['image'][0]))
+print(type(ds.to_dict()['image'][0]['path']))
+print(type(ds.to_dict()['image'][0]['bytes']))
+print(ds.to_dict()['image'][0].keys())
+print(ds.to_dict()['text'][0])

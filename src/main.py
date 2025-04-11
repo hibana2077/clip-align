@@ -23,13 +23,13 @@ DATASET_NAME = "mscoco"
 
 # MODEL_NAME = "resnet18"
 # MODEL_NAME = "dla34"
-MODEL_NAME = "mobilenetv4_hybrid_medium"
+# MODEL_NAME = "mobilenetv4_hybrid_medium"
 # MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 # MODEL_NAME = "eva02_base_patch14_448"
 # MODEL_NAME = "nextvit_small"
 # MODEL_NAME = "resnet50"
-# MODEL_NAME = "xception41"
+MODEL_NAME = "xception41"
 # MODEL_NAME = "xception65"
 
 SPLIT_RATIO = 0.9
@@ -45,7 +45,7 @@ print(f"Device: {device}")
 
 def get_dataloader(batch_size=128, preload=True, cache_dir=None):
     # Load the original dataset and set the batch size
-    processing_batch_size = 300  # Batch size for preprocessing
+    processing_batch_size = 30  # Batch size for preprocessing
     dataset = EmbeddingDataset(DATASET_NAME,
                                MODEL_NAME,
                                batch_size=processing_batch_size,

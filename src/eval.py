@@ -23,21 +23,22 @@ from clip_align.converter import Converter, Converter_Att, Converter_Linear, Hil
 from clip_align.eval_utils import I2T, T2I
 
 # Config
-EVAL_DATASET_NAME = "urban1k"
+# EVAL_DATASET_NAME = "urban1k"
+# EVAL_DATASET_NAME = "flickr1k"
+EVAL_DATASET_NAME = "mscoco"
 
-# EVAL_DATASET_NAME = "mscoco"
 # DATASET_NAME = "flickr30k"
 DATASET_NAME = "mscoco"
 
 # MODEL_NAME = "resnet18"
 # MODEL_NAME = "dla34"
-MODEL_NAME = "mobilenetv4_hybrid_medium"
+# MODEL_NAME = "mobilenetv4_hybrid_medium"
 # MODEL_NAME = "vit_xsmall_patch16_clip_224"
 # MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
 # MODEL_NAME = "eva02_base_patch14_448"
 # MODEL_NAME = "nextvit_small"
 # MODEL_NAME = "resnet50"
-# MODEL_NAME = "xception41"
+MODEL_NAME = "xception41"
 # MODEL_NAME = "xception65"
 
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'

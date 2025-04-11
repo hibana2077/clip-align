@@ -17,12 +17,29 @@ def original_clip_inference(
 
     # Set the model to evaluation mode
     model.eval()
+    
+    batch_size = 128
+    clip_image_embedding_list = []
+    clip_text_embedding_list = []
+    
     with torch.no_grad():
-        # Get image features
-        clip_image_embedding = model.get_image_features(image_set.to(device))
-
-        # Get text features
-        clip_text_embedding = model.get_text_features(text_set.to(device))
+        # Process in batches
+        for i in range(0, len(image_set), batch_size):
+            # Get batch
+            image_batch = image_set[i:i+batch_size].to(device)
+            text_batch = text_set[i:i+batch_size].to(device)
+            
+            # Get image features
+            batch_clip_image_embedding = model.get_image_features(image_batch)
+            clip_image_embedding_list.append(batch_clip_image_embedding)
+            
+            # Get text features
+            batch_clip_text_embedding = model.get_text_features(text_batch)
+            clip_text_embedding_list.append(batch_clip_text_embedding)
+        
+        # Concatenate all batch results
+        clip_image_embedding = torch.cat(clip_image_embedding_list, dim=0)
+        clip_text_embedding = torch.cat(clip_text_embedding_list, dim=0)
 
     return clip_image_embedding, clip_text_embedding
 
@@ -59,7 +76,7 @@ def converter_clip_inference(
 
     # Do the inference
     with torch.no_grad():
-        batch_size = 32
+        batch_size = 8
         converter_embedding_list = []
         clip_text_embedding_list = []
         
