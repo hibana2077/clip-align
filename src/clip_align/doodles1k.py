@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import io
 
-class DoodlesCaptionsDataset(Dataset):
+class Doodles1k(Dataset):
     def __init__(self, split="train"):
         # Load the dataset
         self.ds = load_dataset("julianmoraes/doodles-captions-manual", split=split)
@@ -27,7 +27,7 @@ class DoodlesCaptionsDataset(Dataset):
 # Example usage:
 if __name__ == "__main__":
     # Create dataset
-    dataset = DoodlesCaptionsDataset(split="train")
+    dataset = Doodles1k(split="train")
     
     # Check length
     print(f"Dataset length: {len(dataset)}")

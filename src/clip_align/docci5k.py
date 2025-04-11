@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import io
 
-class DOCCIDataset(Dataset):
+class DOCCI5k(Dataset):
     def __init__(self, split="test"):
         # Load the dataset
         builder = DOCCI()
@@ -30,7 +30,7 @@ class DOCCIDataset(Dataset):
 # Example usage:
 if __name__ == "__main__":
     # Create dataset
-    dataset = DOCCIDataset()
+    dataset = DOCCI1k()
     
     # Check length
     print(f"Dataset length: {len(dataset)}")

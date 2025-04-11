@@ -16,16 +16,22 @@ import json
 # self defined dataset
 from clip_align.cfg import DATASET_TYPE
 from clip_align.infernece import original_clip_inference, converter_clip_inference
-from clip_align.flickr30k import FlickrDataset
-from clip_align.urban1k import Urban1k
-from clip_align.mscoco import MSCOCODataset
+
+from clip_align.flickr1k import Flickr1k # torch like
+from clip_align.docci5k import DOCCI5k # torch like
+from clip_align.doodles1k import Doodles1k # torch like
+from clip_align.urban1k import Urban1k # torch like
+from clip_align.mscoco5k import MSCOCO5k # torch like
+
 from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.eval_utils import I2T, T2I
 
 # Config
 # EVAL_DATASET_NAME = "urban1k"
 # EVAL_DATASET_NAME = "flickr1k"
-EVAL_DATASET_NAME = "mscoco"
+EVAL_DATASET_NAME = "mscoco5k" # error
+# EVAL_DATASET_NAME = "docci5k"
+# EVAL_DATASET_NAME = "doodles1k"
 
 # DATASET_NAME = "flickr30k"
 DATASET_NAME = "mscoco"
@@ -59,20 +65,14 @@ def load_test_data(dataset_name:str):
     tasks = DATASET_TYPE[dataset_name]
     if dataset_name == "urban1k":
         test_dataset = Urban1k(root_dir="./data", download=True)
-    elif dataset_name == "mscoco":
-        test_dataset = MSCOCODataset(
-            parquet_file_path="./data/mscoco_test2017.parquet",
-            index_url="https://huggingface.co/datasets/ChristophSchuhmann/MS_COCO_2017_URL_TEXT/resolve/main/mscoco.parquet?download=true",
-            split="train2017",
-            download=True,
-            cache_dir="./data/mscoco_cache",
-            sample=2000
-        )
-        test_dataset.download_all(num_workers=32)
-    elif dataset_name == "flickr30k":
-        test_dataset = FlickrDataset()
-        test_dataset.download_and_prepare()
-        test_dataset = test_dataset.as_dataset()
+    elif dataset_name == "mscoco5k":
+        test_dataset = MSCOCO5k(split="test")
+    elif dataset_name == "flickr1k":
+        test_dataset = Flickr1k(split="test")
+    elif dataset_name == "docci5k":
+        test_dataset = DOCCI5k()
+    elif dataset_name == "doodles1k":
+        test_dataset = Doodles1k(split="train")
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 

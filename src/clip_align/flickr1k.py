@@ -7,7 +7,7 @@ import random
 # set the seed for reproducibility
 random.seed(42)
 
-class Flickr1kDataset(Dataset):
+class Flickr1k(Dataset):
     def __init__(self, split="test"):
         # Load the dataset
         self.ds = load_dataset("nlphuji/flickr_1k_test_image_text_retrieval")
@@ -34,7 +34,7 @@ class Flickr1kDataset(Dataset):
 # Example usage:
 if __name__ == "__main__":
     # Create dataset
-    dataset = Flickr1kDataset(split="test")
+    dataset = Flickr1k(split="test")
     
     # Check length
     print(f"Dataset length: {len(dataset)}")

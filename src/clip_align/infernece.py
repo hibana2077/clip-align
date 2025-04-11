@@ -18,7 +18,7 @@ def original_clip_inference(
     # Set the model to evaluation mode
     model.eval()
     
-    batch_size = 128
+    batch_size = 8
     clip_image_embedding_list = []
     clip_text_embedding_list = []
     
