@@ -4,9 +4,9 @@
 
 - Evaluate different datasets
     - Urban1k
-    - Docci
-    - Flickr30k
-    - [coco](https://huggingface.co/datasets/detection-datasets/coco)
+    - Docci5k
+    - Flickr1k
+    - Flux1k
 
 ## Record data
 

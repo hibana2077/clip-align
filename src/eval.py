@@ -17,11 +17,12 @@ import json
 from clip_align.cfg import DATASET_TYPE
 from clip_align.infernece import original_clip_inference, converter_clip_inference
 
-from clip_align.flickr1k import Flickr1k # torch like
-from clip_align.docci5k import DOCCI5k # torch like
-from clip_align.doodles1k import Doodles1k # torch like
-from clip_align.urban1k import Urban1k # torch like
-from clip_align.mscoco5k import MSCOCO5k # torch like
+from clip_align.eval_dataset.flickr1k import Flickr1k # torch like
+from clip_align.eval_dataset.flux1k import Flux1k # torch like
+from clip_align.eval_dataset.docci5k import DOCCI5k # torch like
+from clip_align.eval_dataset.doodles1k import Doodles1k # torch like
+from clip_align.eval_dataset.urban1k import Urban1k # torch like
+from clip_align.eval_dataset.mscoco5k import MSCOCO5k # torch like
 
 from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.eval_utils import I2T, T2I
@@ -32,6 +33,7 @@ EVAL_DATASET_NAME = "urban1k"
 # EVAL_DATASET_NAME = "mscoco5k"
 # EVAL_DATASET_NAME = "docci5k"
 # EVAL_DATASET_NAME = "doodles1k"
+# EVAL_DATASET_NAME = "flux1k"
 
 # DATASET_NAME = "flickr30k"
 DATASET_NAME = "mscoco"
@@ -73,6 +75,8 @@ def load_test_data(dataset_name:str):
         test_dataset = DOCCI5k()
     elif dataset_name == "doodles1k":
         test_dataset = Doodles1k(split="train")
+    elif dataset_name == "flux1k":
+        test_dataset = Flux1k(split="test")
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 

@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import io
 
-class Flux1kCaptionDataset(Dataset):
+class Flux1k(Dataset):
     def __init__(self, split="train"):
         # Load the dataset
         self.ds = load_dataset("Kariander1/flux_1k_captions")
@@ -27,7 +27,7 @@ class Flux1kCaptionDataset(Dataset):
 # Example usage:
 if __name__ == "__main__":
     # Create dataset
-    dataset = Flux1kCaptionDataset(split="train")
+    dataset = Flux1k(split="train")
     
     # Check length
     print(f"Dataset length: {len(dataset)}")
