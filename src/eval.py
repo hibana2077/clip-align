@@ -27,9 +27,9 @@ from clip_align.converter import Converter, Converter_Att, Converter_Linear, Hil
 from clip_align.eval_utils import I2T, T2I
 
 # Config
-# EVAL_DATASET_NAME = "urban1k"
+EVAL_DATASET_NAME = "urban1k"
 # EVAL_DATASET_NAME = "flickr1k"
-EVAL_DATASET_NAME = "mscoco5k" # error
+# EVAL_DATASET_NAME = "mscoco5k"
 # EVAL_DATASET_NAME = "docci5k"
 # EVAL_DATASET_NAME = "doodles1k"
 
@@ -49,8 +49,8 @@ MODEL_NAME = "xception41"
 
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
 
-# CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
+CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
+# CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
 # CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
 
