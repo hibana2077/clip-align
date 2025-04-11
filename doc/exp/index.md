@@ -6,8 +6,6 @@
     - Urban1k
     - Docci
     - Flickr30k
-    - CIFAR-100
-    - [ImageNet-1k](https://huggingface.co/datasets/ILSVRC/imagenet-1k)
     - [coco](https://huggingface.co/datasets/detection-datasets/coco)
 
 ## Record data

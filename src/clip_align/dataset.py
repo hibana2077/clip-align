@@ -50,7 +50,7 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=10000
+                sample=50000
             )
             self.dataset.download_all(num_workers=8)
             self.dataset_size = len(self.dataset)
@@ -194,7 +194,8 @@ class EmbeddingDataset(Dataset):
         # Always save img embeddings
         self.img_embeddings = torch.stack(self.img_embeddings)
         if self.use_cache:
-            self._save_cache(self.img_embeddings, img_cache_path)
+            # self._save_cache(self.img_embeddings, img_cache_path)
+            print(f"Not saving img embeddings")
         
         print(f"預處理完成。數據集大小: {len(self.clip_embeddings)}")
 
