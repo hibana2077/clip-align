@@ -2,10 +2,11 @@ transformers==4.50.3
 pillow
 numpy
 tqdm
-timm
 scikit-learn
 matplotlib
 datasets
 seaborn
 nvitop
 open_clip_torch
+timm
+ultralytics-thop
