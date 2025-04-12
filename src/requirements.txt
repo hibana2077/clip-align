@@ -8,3 +8,4 @@ matplotlib
 datasets
 seaborn
 nvitop
+open_clip_torch
