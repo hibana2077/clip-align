@@ -22,7 +22,7 @@ DATASET_DICT = {
 
 class EmbeddingDataset(Dataset):
     def __init__(self, dataset, img_model, ann_file=None, img_model_transform=None, device=None, batch_size=512, 
-                 clip_model_name="ViT-B-32", clip_pretrained="laion2b_s34b_b79k", use_cache=True, cache_dir="./cache", **kwargs):
+                 clip_model_name="ViT-B-32", clip_pretrained="laion2b_s34b_b79k", use_cache=True, cache_dir="./cache", sample=5000, **kwargs):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
@@ -52,7 +52,7 @@ class EmbeddingDataset(Dataset):
                 split="train2017",
                 download=True,
                 cache_dir="./data/mscoco_cache",
-                sample=3000
+                sample=5000
             )
             self.dataset.download_all(num_workers=8)
             self.dataset_size = len(self.dataset)

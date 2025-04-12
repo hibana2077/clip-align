@@ -25,6 +25,7 @@ MODEL_NAME = config["train"]["MODEL_NAME"]
 SPLIT_RATIO = config["train"]["SPLIT_RATIO"]
 CLIP_MODEL_NAME = config["train"]["CLIP_MODEL_NAME"]
 CLIP_PRETRAINED = config["train"]["CLIP_PRETRAINED"]
+SAMPLE = config["train"]["SAMPLE"]
 
 
 if CLIP_PRETRAINED is None:
@@ -41,7 +42,8 @@ def get_dataloader(batch_size=512, preload=True, cache_dir=None):
                                MODEL_NAME,
                                batch_size=processing_batch_size,
                                clip_model_name=CLIP_MODEL_NAME,
-                               clip_pretrained=CLIP_PRETRAINED)
+                               clip_pretrained=CLIP_PRETRAINED,
+                               sample=SAMPLE)
     
     # Get embedding sizes
     clip_model_embedding_size = dataset.clip_model_embedding_size
