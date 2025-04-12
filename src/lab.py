@@ -8,20 +8,20 @@
 # import numpy as np
 # from PIL import Image
 
-# from datasets import load_dataset
+from datasets import load_dataset
 
 # # ds = load_dataset("pixparse/cc3m-wds")
-# # ds = load_dataset("julianmoraes/doodles-captions-manual", split="train")
-# ds = load_dataset("nlphuji/mscoco_2014_5k_test_image_text_retrieval", split="test")
-# print(ds)
-# print(ds.to_dict().keys())
-# print(len(ds.to_dict()['image']))
-# print(len(ds.to_dict()['caption']))
-# print(type(ds.to_dict()['image'][0]))
-# print(type(ds.to_dict()['image'][0]['path']))
-# print(type(ds.to_dict()['image'][0]['bytes']))
-# print(ds.to_dict()['image'][0].keys())
-# print(ds.to_dict()['caption'][0][0])
+# ds = load_dataset("julianmoraes/doodles-captions-manual", split="train")
+ds = load_dataset("eltorio/ROCOv2-radiology", split="test") # train test val
+print(ds)
+print(ds.to_dict().keys())
+print(len(ds.to_dict()['image']))
+print(len(ds.to_dict()['caption']))
+print(type(ds.to_dict()['image'][0]))
+print(type(ds.to_dict()['image'][0]['path']))
+print(type(ds.to_dict()['image'][0]['bytes']))
+print(ds.to_dict()['image'][0].keys())
+print(ds.to_dict()['caption'][0][0])
 
 # import torch
 # from PIL import Image
@@ -43,9 +43,3 @@
 #     text_probs = (100.0 * image_features @ text_features.T).softmax(dim=-1)
 
 # print("Label probs:", text_probs)  # prints: [[1., 0., 0.]]
-
-import torch
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-print(str(device))
