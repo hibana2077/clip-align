@@ -23,6 +23,8 @@ from clip_align.eval_dataset.docci5k import DOCCI5k # torch like
 from clip_align.eval_dataset.doodles1k import Doodles1k # torch like
 from clip_align.eval_dataset.urban1k import Urban1k # torch like
 from clip_align.eval_dataset.mscoco5k import MSCOCO5k # torch like
+from clip_align.eval_dataset.roco10k import ROCOv2Dataset # torch like
+
 
 from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.eval_utils import I2T, T2I
@@ -59,6 +61,8 @@ def load_test_data(dataset_name:str):
         test_dataset = Doodles1k(split="train")
     elif dataset_name == "flux1k":
         test_dataset = Flux1k(split="test")
+    elif dataset_name == "roco10k":
+        test_dataset = ROCOv2Dataset(split="test")
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 

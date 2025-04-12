@@ -1,9 +1,9 @@
 train:
   DATASET_NAME: "mscoco"
   # Lightweight
-  MODEL_NAME: "mobilenetv3_small_075"
+  # MODEL_NAME: "mobilenetv3_small_075"
   # MODEL_NAME: "lcnet_050"
-  # MODEL_NAME: "tinynet_e"
+  MODEL_NAME: "tinynet_e"
   # M
   # MODEL_NAME: "convnext_small"
   # MODEL_NAME: "coatnet_rmlp_2_rw_224"
@@ -29,9 +29,10 @@ train:
   SAMPLE: 10000
 
 eval:
-  EVAL_DATASET_NAME: "urban1k"
+  # EVAL_DATASET_NAME: "urban1k"
   # EVAL_DATASET_NAME: "flickr1k"
   # EVAL_DATASET_NAME: "mscoco5k"
   # EVAL_DATASET_NAME: "docci5k"
   # EVAL_DATASET_NAME: "doodles1k"
   # EVAL_DATASET_NAME: "flux1k"
+  EVAL_DATASET_NAME: "roco10k"

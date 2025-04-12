@@ -6,4 +6,5 @@ DATASET_TYPE = {
     "docci5k": ["T2I","I2T"], # https://huggingface.co/datasets/google/docci
     "mscoco5k": ["T2I","I2T"], # https://huggingface.co/datasets/nlphuji/mscoco_2014_5k_test_image_text_retrieval
     "doodles1k": ["T2I","I2T"], # https://huggingface.co/datasets/julianmoraes/doodles-captions-manual
+    "roco10k": ["T2I","I2T"], # https://huggingface.co/datasets/eltorio/ROCOv2-radiology
 }
