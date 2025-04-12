@@ -17,26 +17,18 @@ from clip_align.loss import AlignLoss
 from clip_align.vis import visualize_projection, visualize_similarity
 
 # Config
-# DATASET_NAME = "flickr30k"
-DATASET_NAME = "mscoco"
+import yaml
+with open("cfg.yml", "r") as f:
+    config = yaml.safe_load(f)
+DATASET_NAME = config["train"]["DATASET_NAME"]
+MODEL_NAME = config["train"]["MODEL_NAME"]
+SPLIT_RATIO = config["train"]["SPLIT_RATIO"]
+CLIP_MODEL_NAME = config["train"]["CLIP_MODEL_NAME"]
+CLIP_PRETRAINED = config["train"]["CLIP_PRETRAINED"]
 
-# MODEL_NAME = "resnet18"
-MODEL_NAME = "dla34"
-# MODEL_NAME = "mobilenetv4_hybrid_medium"
-# MODEL_NAME = "vit_xsmall_patch16_clip_224"
-# MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
-# MODEL_NAME = "eva02_base_patch14_448"
-# MODEL_NAME = "nextvit_small"
-# MODEL_NAME = "resnet50"
-# MODEL_NAME = "xception41"
-# MODEL_NAME = "xception65"
 
-SPLIT_RATIO = 0.9
-
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
-# CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
-# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
-# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
+if CLIP_PRETRAINED is None:
+    raise ValueError("CLIP_PRETRAINED must be specified in the configuration.")
 
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,11 +36,12 @@ print(f"Device: {device}")
 
 def get_dataloader(batch_size=512, preload=True, cache_dir=None):
     # Load the original dataset and set the batch size
-    processing_batch_size = 30  # Batch size for preprocessing
+    processing_batch_size = 300  # Batch size for preprocessing
     dataset = EmbeddingDataset(DATASET_NAME,
                                MODEL_NAME,
                                batch_size=processing_batch_size,
-                               clip_model_name=CLIP_MODEL_NAME)
+                               clip_model_name=CLIP_MODEL_NAME,
+                               clip_pretrained=CLIP_PRETRAINED)
     
     # Get embedding sizes
     clip_model_embedding_size = dataset.clip_model_embedding_size
@@ -223,7 +216,8 @@ if __name__ == '__main__':
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"Best validation loss so far. Saving model...")
-            torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")
+            torch.save(converter, f"converter_{DATASET_NAME}_{MODEL_NAME}.pth")
+            torch.save(converter.state_dict(), f"converter_{DATASET_NAME}_{MODEL_NAME}_state_dict.pth")
         else:
             print(f"Validation loss did not improve. Not saving model.")
 

@@ -13,3 +13,4 @@ src/similarity_similarity_scatter.png
 src/converter_flickr30k_dla34.pth
 src/converter_flickr30k_xception41.pth
 src/*.pth
+src/clip_align/eval_dataset/__pycache__/

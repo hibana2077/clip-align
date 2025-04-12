@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split, TensorDataset
-from transformers import CLIPModel, CLIPProcessor
+import open_clip
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
@@ -28,33 +28,15 @@ from clip_align.converter import Converter, Converter_Att, Converter_Linear, Hil
 from clip_align.eval_utils import I2T, T2I
 
 # Config
-EVAL_DATASET_NAME = "urban1k"
-# EVAL_DATASET_NAME = "flickr1k"
-# EVAL_DATASET_NAME = "mscoco5k"
-# EVAL_DATASET_NAME = "docci5k"
-# EVAL_DATASET_NAME = "doodles1k"
-# EVAL_DATASET_NAME = "flux1k"
-
-# DATASET_NAME = "flickr30k"
-DATASET_NAME = "mscoco"
-
-# MODEL_NAME = "resnet18"
-# MODEL_NAME = "dla34"
-# MODEL_NAME = "mobilenetv4_hybrid_medium"
-# MODEL_NAME = "vit_xsmall_patch16_clip_224"
-# MODEL_NAME = "tiny_vit_11m_224.dist_in22k_ft_in1k"
-# MODEL_NAME = "eva02_base_patch14_448"
-# MODEL_NAME = "nextvit_small"
-# MODEL_NAME = "resnet50"
-MODEL_NAME = "xception41"
-# MODEL_NAME = "xception65"
-
+import yaml
+with open("cfg.yml", "r") as f:
+    config = yaml.safe_load(f)
+EVAL_DATASET_NAME = config["eval"]["EVAL_DATASET_NAME"]
+DATASET_NAME = config["train"]["DATASET_NAME"]
+MODEL_NAME = config["train"]["MODEL_NAME"]
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
-
-CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
-# CLIP_MODEL_NAME = "openai/clip-vit-base-patch16"
-# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
-# CLIP_MODEL_NAME = "openai/clip-vit-large-patch14-336"
+CLIP_MODEL_NAME = config["train"]["CLIP_MODEL_NAME"]
+CLIP_PRETRAINED = config["train"]["CLIP_PRETRAINED"]
 
 CONVERTER_MODEL_TYPE = Converter
 # CONVERTER_MODEL_TYPE = HilbertProjectionConverter
@@ -82,7 +64,7 @@ def load_test_data(dataset_name:str):
 
     return test_dataset, tasks
 
-def preprocess_data(dataset, clip_processor, img_model_transform):
+def preprocess_data(dataset, clip_processor, img_model_transform, tokenizer):
     # Preprocess data for inference
     clip_images = []
     clip_texts = []
@@ -90,7 +72,7 @@ def preprocess_data(dataset, clip_processor, img_model_transform):
 
     for img, text in tqdm(dataset, desc="Preprocessing data"):
         # Preprocess image for CLIP
-        clip_image = clip_processor(images=img, return_tensors="pt")["pixel_values"]
+        clip_image = clip_processor(img).unsqueeze(0)
         clip_images.append(clip_image)
 
         # Preprocess image for CNN
@@ -98,7 +80,8 @@ def preprocess_data(dataset, clip_processor, img_model_transform):
         img_images.append(img_image)
 
         # Preprocess text for CLIP
-        clip_text = clip_processor(text=text, return_tensors="pt", max_length=77, padding='max_length', truncation=True)["input_ids"]
+        # clip_text = clip_processor(text=text, return_tensors="pt", max_length=77, padding='max_length', truncation=True)["input_ids"]
+        clip_text = tokenizer(text)
         clip_texts.append(clip_text)
 
     # Stack the tensors
@@ -120,16 +103,19 @@ if __name__ == "__main__":
     # Load dataset
     test_dataset, tasks = load_test_data(EVAL_DATASET_NAME)
 
-    # Load CLIP model
-    clip_processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
+    # Load CLIP processor
+    _, _, clip_processor = open_clip.create_model_and_transforms(CLIP_MODEL_NAME, pretrained=CLIP_PRETRAINED) if CLIP_PRETRAINED else open_clip.create_model_and_transforms(CLIP_MODEL_NAME)
     
+    # Load tokenizer
+    tokenizer = open_clip.get_tokenizer(CLIP_MODEL_NAME)
+
     # Load CNN model
     img_model = timm.create_model(MODEL_NAME, pretrained=True, num_classes=0)
     data_config = timm.data.resolve_model_data_config(img_model)
     img_model_transform = timm.data.create_transform(**data_config)
 
     # Preprocess data
-    clip_images, img_images, clip_texts = preprocess_data(test_dataset, clip_processor, img_model_transform)
+    clip_images, img_images, clip_texts = preprocess_data(test_dataset, clip_processor, img_model_transform, tokenizer)
     print(f"clip_images: {clip_images.shape}")
     print(f"img_images: {img_images.shape}")
     print(f"clip_texts: {clip_texts.shape}")
@@ -137,9 +123,10 @@ if __name__ == "__main__":
     # Do the inference (Original CLIP)
     clip_image_embedding, clip_text_embedding = original_clip_inference(
         model_name=CLIP_MODEL_NAME,
+        pretrained=CLIP_PRETRAINED,
         image_set=clip_images,
         text_set=clip_texts,
-        device=device
+        device=str(device),
     )
     print(f"clip_image_embedding: {clip_image_embedding.shape}")
     print(f"clip_text_embedding: {clip_text_embedding.shape}")
@@ -147,12 +134,13 @@ if __name__ == "__main__":
     # Do the inference (Converter)
     converter_embedding, clip_text_embedding = converter_clip_inference(
         clip_model_name=CLIP_MODEL_NAME,
+        pretrained=CLIP_PRETRAINED,
         cnn_model_name=MODEL_NAME,
         converter_model_path=CONVERTER_PT,
         converter_model_type=CONVERTER_MODEL_TYPE,
         image_set=img_images,
         text_set=clip_texts,
-        device=device
+        device=str(device),
     )
     print(f"converter_embedding: {converter_embedding.shape}")
     print(f"clip_text_embedding: {clip_text_embedding.shape}")
