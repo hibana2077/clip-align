@@ -8,6 +8,28 @@
     - Flickr1k
     - Flux1k
 
+- Eval model
+    - Lightweight(less than ViT-B/32)
+        - mobilenetv3_small_075
+        - lcnet_050
+        - tinynet_e
+    - Medium(less than ViT-B/16)
+        - convnext_small
+        - coatnet_rmlp_2_rw_224
+        - efficientnet_b5
+    - Large(less than ViT-L/14)
+        - beitv2_large_patch16_224
+        - eva_large_patch14_196
+        - convnextv2_large
+    - XLarge(less than ViT-H/14)
+        - beitv2_large_patch16_224
+        - regnety_1280
+        - convnext_xxlarge
+    - Special
+        - xception41
+        - xception65
+        - xception71
+
 ## Record data
 
 ### 計算成本分析

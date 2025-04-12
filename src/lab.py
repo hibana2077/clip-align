@@ -21,7 +21,7 @@ print(type(ds.to_dict()['image'][0]))
 print(type(ds.to_dict()['image'][0]['path']))
 print(type(ds.to_dict()['image'][0]['bytes']))
 print(ds.to_dict()['image'][0].keys())
-print(ds.to_dict()['caption'][0][0])
+print(ds.to_dict()['caption'][0])
 
 # import torch
 # from PIL import Image

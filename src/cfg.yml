@@ -1,22 +1,32 @@
 train:
   DATASET_NAME: "mscoco"
-  # MODEL_NAME: "resnet50"
-  # MODEL_NAME: "resnet18"
-  # MODEL_NAME: "dla34"
-  # MODEL_NAME: "mobilenetv4_hybrid_medium"
-  # MODEL_NAME: "vit_xsmall_patch16_clip_224"
-  # MODEL_NAME: "tiny_vit_11m_224.dist_in22k_ft_in1k"
-  # MODEL_NAME: "eva02_base_patch14_448"
-  # MODEL_NAME: "nextvit_small"
-  MODEL_NAME: "xception41"
+  # Lightweight
+  MODEL_NAME: "mobilenetv3_small_075"
+  # MODEL_NAME: "lcnet_050"
+  # MODEL_NAME: "tinynet_e"
+  # M
+  # MODEL_NAME: "convnext_small"
+  # MODEL_NAME: "coatnet_rmlp_2_rw_224"
+  # MODEL_NAME: "efficientnet_b5"
+  # L
+  # MODEL_NAME: "beitv2_large_patch16_224"
+  # MODEL_NAME: "eva_large_patch14_196"
+  # MODEL_NAME: "convnextv2_large"
+  # XL
+  # MODEL_NAME: "beitv2_large_patch16_224"
+  # MODEL_NAME: "regnety_1280"
+  # MODEL_NAME: "convnext_xxlarge"
+  # Special
+  # MODEL_NAME: "xception41"
   # MODEL_NAME: "xception65"
+  # MODEL_NAME: "xception71"
   SPLIT_RATIO: 0.9
   CLIP_MODEL_NAME: "ViT-B-32"
   # CLIP_MODEL_NAME: "hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO"
   # CLIP_PRETRAINED: "datacomp_xl_s13b_b90k"
   CLIP_PRETRAINED: "openai"
   # CLIP_PRETRAINED: ""
-  SAMPLE: 50000
+  SAMPLE: 10000
 
 eval:
   EVAL_DATASET_NAME: "urban1k"
