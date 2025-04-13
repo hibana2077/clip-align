@@ -1,13 +1,13 @@
 train:
   DATASET_NAME: "mscoco"
   # Lightweight
-  # MODEL_NAME: "mobilenetv3_small_075"
+  MODEL_NAME: "mobilenetv3_small_075"
   # MODEL_NAME: "lcnet_050"
   # MODEL_NAME: "tinynet_e"
   # M
   # MODEL_NAME: "convnext_small"
   # MODEL_NAME: "coatnet_rmlp_2_rw_224"
-  MODEL_NAME: "hgnetv2_b6"
+  # MODEL_NAME: "hgnetv2_b6"
   # L
   # MODEL_NAME: "beitv2_large_patch16_224"
   # MODEL_NAME: "eva_large_patch14_196"
@@ -28,13 +28,13 @@ train:
   # CLIP_PRETRAINED: "datacomp_xl_s13b_b90k"
   CLIP_PRETRAINED: "openai"
   # CLIP_PRETRAINED: ""
-  SAMPLE: 500000
+  SAMPLE: 250000
 
 eval:
-  EVAL_DATASET_NAME: "urban1k"
+  # EVAL_DATASET_NAME: "urban1k"
   # EVAL_DATASET_NAME: "flickr1k"
   # EVAL_DATASET_NAME: "mscoco5k"
   # EVAL_DATASET_NAME: "docci5k"
   # EVAL_DATASET_NAME: "doodles1k"
-  # EVAL_DATASET_NAME: "flux1k"
+  EVAL_DATASET_NAME: "flux1k"
   # EVAL_DATASET_NAME: "roco10k"

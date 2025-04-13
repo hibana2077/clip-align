@@ -80,7 +80,7 @@ def load_test_data(dataset_name:str):
     elif dataset_name == "doodles1k":
         test_dataset = Doodles1k(split="train")
     elif dataset_name == "flux1k":
-        test_dataset = Flux1k(split="test")
+        test_dataset = Flux1k(split="train")
     elif dataset_name == "roco10k":
         test_dataset = ROCOv2Dataset(split="test")
     else:
