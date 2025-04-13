@@ -29,6 +29,24 @@ from clip_align.eval_dataset.roco10k import ROCOv2Dataset # torch like
 from clip_align.converter import Converter, Converter_Att, Converter_Linear, HilbertProjectionConverter, ProjectionConverter
 from clip_align.eval_utils import I2T, T2I
 
+def abbreviate_number(n):
+    """
+    將大於等於 1000 的數字簡化為以 k 為單位的格式。
+    範例:
+      1000 -> "1k"
+      5000 -> "5k"
+      1500 -> "1.5k"
+    """
+    if n >= 1000:
+        # 如果能整除 1000，就用整數表示
+        if n % 1000 == 0:
+            return f"{n // 1000}k"
+        else:
+            # 若有餘數，則保留一位小數
+            return f"{n / 1000:.1f}k"
+    else:
+        return str(n)
+
 # Config
 import yaml
 with open("cfg.yml", "r") as f:
@@ -39,6 +57,8 @@ MODEL_NAME = config["train"]["MODEL_NAME"]
 CONVERTER_PT = f'./converter_{DATASET_NAME}_{MODEL_NAME}.pth'
 CLIP_MODEL_NAME = config["train"]["CLIP_MODEL_NAME"]
 CLIP_PRETRAINED = config["train"]["CLIP_PRETRAINED"]
+SAMPLE_SIZE = config["train"]["SAMPLE"]
+SAVE_FILE_NAME = f"{abbreviate_number(SAMPLE_SIZE)}_{DATASET_NAME}_on_{EVAL_DATASET_NAME}.json"
 
 CONVERTER_MODEL_TYPE = Converter
 # CONVERTER_MODEL_TYPE = HilbertProjectionConverter
@@ -168,6 +188,6 @@ if __name__ == "__main__":
         "T2I Recall (Original)": t2i_recall_original,
         "T2I Recall (Converter)": t2i_recall_converter
     }
-    with open("evaluation_results.json", "w") as f:
+    with open(SAVE_FILE_NAME, "w") as f:
         json.dump(results, f, indent=4)
-    print("Evaluation results saved to evaluation_results.json")
+    print(f"Evaluation results saved to {SAVE_FILE_NAME}")

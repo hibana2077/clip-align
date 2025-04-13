@@ -96,6 +96,24 @@ def get_dataloader(batch_size=512, preload=True, cache_dir=None):
     
     return train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size
 
+def abbreviate_number(n):
+    """
+    將大於等於 1000 的數字簡化為以 k 為單位的格式。
+    範例:
+      1000 -> "1k"
+      5000 -> "5k"
+      1500 -> "1.5k"
+    """
+    if n >= 1000:
+        # 如果能整除 1000，就用整數表示
+        if n % 1000 == 0:
+            return f"{n // 1000}k"
+        else:
+            # 若有餘數，則保留一位小數
+            return f"{n / 1000:.1f}k"
+    else:
+        return str(n)
+
 if __name__ == '__main__':
     # Create dataset and dataloader
     train_loader, val_loader, clip_model_embedding_size, img_model_embedding_size = get_dataloader(
@@ -273,7 +291,9 @@ if __name__ == '__main__':
     # Save to json
     import json
     from thop import profile
-    macs, params = profile(converter, inputs=(all_resnet_embeddings,))
+    dummy_input = torch.randn(1, img_model_embedding_size).to(device)
+    macs, params = profile(converter, inputs=(dummy_input, ), verbose=False)
+    print(f"MACs: {macs}, Params: {params}")
     save_data = {
         "clip_to_convert_similarity": F.cosine_similarity(all_clip_embeddings, all_convert_embeddings).mean().item(),
         "macs": macs,
@@ -282,6 +302,6 @@ if __name__ == '__main__':
         "best_val_loss": best_val_loss,
     }
 
-    with open(f"converter_{DATASET_NAME}_{MODEL_NAME}_stats.json", "w") as f:
+    with open(f"{abbreviate_number(SAMPLE)}_{DATASET_NAME}_converter_{DATASET_NAME}_{MODEL_NAME}_stats.json", "w") as f:
         json.dump(save_data, f, indent=4)
-        print(f"Stats saved to converter_{DATASET_NAME}_{MODEL_NAME}_stats.json")
+        print(f"Stats saved to {abbreviate_number(SAMPLE)}_{DATASET_NAME}_converter_{DATASET_NAME}_{MODEL_NAME}_stats.json")

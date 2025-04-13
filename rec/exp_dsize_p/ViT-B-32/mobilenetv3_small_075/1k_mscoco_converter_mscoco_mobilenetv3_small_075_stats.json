@@ -1,0 +1,7 @@
+{
+    "clip_to_convert_similarity": 0.404216468334198,
+    "macs": 2179328.0,
+    "params": 2181762.0,
+    "flops": 4358656.0,
+    "best_val_loss": 1.277536392211914
+}
