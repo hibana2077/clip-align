@@ -269,3 +269,19 @@ if __name__ == '__main__':
 
     # Similarity
     print(f"CLIP to Converted Similarity: {F.cosine_similarity(all_clip_embeddings, all_convert_embeddings).mean()}")
+
+    # Save to json
+    import json
+    from thop import profile
+    macs, params = profile(converter, inputs=(all_resnet_embeddings,))
+    save_data = {
+        "clip_to_convert_similarity": F.cosine_similarity(all_clip_embeddings, all_convert_embeddings).mean().item(),
+        "macs": macs,
+        "params": params,
+        "flops": macs * 2,
+        "best_val_loss": best_val_loss,
+    }
+
+    with open(f"converter_{DATASET_NAME}_{MODEL_NAME}_stats.json", "w") as f:
+        json.dump(save_data, f, indent=4)
+        print(f"Stats saved to converter_{DATASET_NAME}_{MODEL_NAME}_stats.json")

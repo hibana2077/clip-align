@@ -26,13 +26,13 @@ train:
   # CLIP_PRETRAINED: "datacomp_xl_s13b_b90k"
   CLIP_PRETRAINED: "openai"
   # CLIP_PRETRAINED: ""
-  SAMPLE: 10000
+  SAMPLE: 1000
 
 eval:
-  # EVAL_DATASET_NAME: "urban1k"
+  EVAL_DATASET_NAME: "urban1k"
   # EVAL_DATASET_NAME: "flickr1k"
   # EVAL_DATASET_NAME: "mscoco5k"
   # EVAL_DATASET_NAME: "docci5k"
   # EVAL_DATASET_NAME: "doodles1k"
   # EVAL_DATASET_NAME: "flux1k"
-  EVAL_DATASET_NAME: "roco10k"
+  # EVAL_DATASET_NAME: "roco10k"

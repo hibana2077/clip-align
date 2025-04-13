@@ -68,7 +68,7 @@ def converter_clip_inference(
 
     # Load the Converter model
     print(f"converter_model_path: {converter_model_path}")
-    converter_model = torch.load(converter_model_path)
+    converter_model = torch.load(converter_model_path, weight_only=False)
     converter_model.to(device)
     converter_model.eval()
 
