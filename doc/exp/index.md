@@ -22,13 +22,9 @@
         - coatnet_rmlp_2_rw_224, 15.18
         - efficientnet_b5, 9.59
     - Large(less than ViT-L/14)
-        - beitv2_large_patch16_224
-        - eva_large_patch14_196
-        - convnextv2_large
-    - XLarge(less than ViT-H/14)
-        - beitv2_large_patch16_224
-        - regnety_1280
-        - convnext_xxlarge
+        - convnext_xxlarge, 151.66
+        - eva_large_patch14_196, 61.57
+        - beit_large_patch16_224, 61.60
     - Special
         - xception41
         - xception65
