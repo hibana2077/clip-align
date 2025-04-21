@@ -3,10 +3,15 @@
 ## Code implementation
 
 - Evaluate different datasets
-    - Urban1k
-    - Docci5k
-    - Flickr1k
-    - Flux1k
+    - genral
+        - mscoco5k
+        - Urban1k
+        - Docci5k
+        - Flickr1k
+    - medical
+        - ROCO10k
+    - AI-generated
+        - flux1k
 
 - Eval model
     - Lightweight(less than ViT-B/32)
