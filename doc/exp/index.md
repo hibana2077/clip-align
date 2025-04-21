@@ -13,10 +13,14 @@
         - mobilenetv3_small_075
         - lcnet_050
         - tinynet_e
+    - Small(less than ViT-B/32) (flops > 1)
+        - convnextv2_nano, 4.06
+        - rexnetr_200, 1.59
+        - maxxvit_rmlp_nano_rw_256, 4.37
     - Medium(less than ViT-B/16)
-        - convnext_small
-        - coatnet_rmlp_2_rw_224
-        - efficientnet_b5
+        - convnext_small, 14.39
+        - coatnet_rmlp_2_rw_224, 15.18
+        - efficientnet_b5, 9.59
     - Large(less than ViT-L/14)
         - beitv2_large_patch16_224
         - eva_large_patch14_196
