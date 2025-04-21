@@ -74,3 +74,15 @@
         - Tip‑Adapter
         - CLIP‑KD
         - Domain Aligned CLIP
+
+- specific domain
+    - Medical
+        - non-med cnn model align MedICaT's image encoder
+        - MedICaT's image encoder align non-med cnn model
+
+- ablation study
+    - 影響參數
+        - adapter size
+        - loss weight
+        - data size
+        - model size
