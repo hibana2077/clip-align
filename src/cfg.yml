@@ -6,8 +6,8 @@ train:
   # MODEL_NAME: "tinynet_e"
   # S
   # MODEL_NAME: "convnextv2_nano"
-  MODEL_NAME: "rexnetr_200.sw_in12k_ft_in1k"
-  # MODEL_NAME: "maxxvit_rmlp_nano_rw_256.sw_in1k"
+  # MODEL_NAME: "rexnetr_200.sw_in12k_ft_in1k"
+  MODEL_NAME: "maxxvit_rmlp_nano_rw_256.sw_in1k"
   # M
   # MODEL_NAME: "convnext_small"
   # MODEL_NAME: "coatnet_rmlp_2_rw_224"
@@ -32,7 +32,7 @@ train:
   # CLIP_PRETRAINED: "datacomp_xl_s13b_b90k"
   CLIP_PRETRAINED: "openai"
   # CLIP_PRETRAINED: ""
-  SAMPLE: 1000
+  SAMPLE: 2000
 
 eval:
   # EVAL_DATASET_NAME: "urban1k"

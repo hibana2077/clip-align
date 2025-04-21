@@ -34,7 +34,9 @@ if CLIP_PRETRAINED is None:
 # 设置设备
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
-
+# 1024 0.43422412872314453 {1: 0.125, 5: 0.274, 10: 0.37}, {1: 0.085, 5: 0.205, 10: 0.291}
+# 512 0.4584212601184845 {1: 0.133, 5: 0.311, 10: 0.416}, {1: 0.083, 5: 0.226, 10: 0.326}
+# 256 0.4886985719203949 {1: 0.129, 5: 0.297, 10: 0.396}, {1: 0.093, 5: 0.212, 10: 0.306}
 def get_dataloader(batch_size=512, preload=True, cache_dir=None):
     # Load the original dataset and set the batch size
     processing_batch_size = 300  # Batch size for preprocessing
@@ -210,8 +212,55 @@ if __name__ == '__main__':
 
             running_loss += loss.item()
 
+    # lambda_k = 0.05  # kernel loss 權重
+
+    # for epoch in range(num_epochs):
+    #     converter.train()
+    #     running_loss = 0.0
+
+    #     for clip_embedding, resnet_embedding, label in tqdm(train_loader):
+    #         clip_embedding = clip_embedding.to(device)
+    #         resnet_embedding = resnet_embedding.to(device)
+
+    #         optimizer.zero_grad()
+
+    #         # 1. 預測輸出 & align loss
+    #         if isinstance(converter, HilbertProjectionConverter):
+    #             output, reg_loss = converter(resnet_embedding)
+    #             loss_align = align_loss(output, clip_embedding)
+    #         else:
+    #             output = converter(resnet_embedding)
+    #             loss_align = align_loss(output, clip_embedding)
+
+    #         # 2. L2 正規化原始特徵
+    #         resnet_norm = F.normalize(resnet_embedding, dim=1)
+
+    #         # 3. 安全計算多項式核
+    #         # 全部 B×B 對
+    #         dot_x = resnet_norm @ resnet_norm.T            # (B,B) pairwise 原始內積
+    #         K_target = (dot_x + 1.0).clamp(-1,1).pow(11)    # (B,B)
+    #         dot_pred = output @ output.T                   # (B,B)
+
+    #         # 5. kernel MSE loss
+    #         loss_kernel = F.mse_loss(dot_pred.flatten(), K_target.flatten())
+
+    #         # 6. 合併所有 loss
+    #         if epoch < 10:
+    #             loss = loss_align# + lambda_k * loss_kernel
+    #         else:
+    #             loss = loss_align + lambda_k * loss_kernel
+    #         if isinstance(converter, HilbertProjectionConverter):
+    #             loss = loss + reg_loss
+
+    #         # 7. 反向、更新
+    #         loss.backward()
+    #         optimizer.step()
+
+    #         running_loss += loss.item()
+
         train_loss = running_loss / len(train_loader)
-        
+        print(f"Epoch {epoch} train loss: {train_loss:.4f}")
+
         # Validation after each epoch
         converter.eval()
         val_loss = 0.0
@@ -228,6 +277,38 @@ if __name__ == '__main__':
                     output = converter(resnet_embedding)
                     loss = align_loss(output, clip_embedding)
                 val_loss += loss.item()
+        # with torch.no_grad():
+        #     for clip_embedding, resnet_embedding, label in val_loader:
+        #         clip_embedding = clip_embedding.to(device)
+        #         resnet_embedding = resnet_embedding.to(device)
+        #         label = label.to(device)
+
+        #         # 1. 預測輸出 & align loss
+        #         if isinstance(converter, HilbertProjectionConverter):
+        #             output, reg_loss = converter(resnet_embedding)
+        #             loss_align = align_loss(output, clip_embedding)
+        #         else:
+        #             output = converter(resnet_embedding)
+        #             loss_align = align_loss(output, clip_embedding)
+
+        #         # 2. 隨機配對（這裡對同一 batch 做 shuffle）
+        #         resnet_norm = F.normalize(resnet_embedding, dim=1)
+        #         # 3. 安全計算多項式核
+        #         # 全部 B×B 對
+        #         dot_x = resnet_norm @ resnet_norm.T            # (B,B) pairwise 原始內積
+        #         K_target = (dot_x + 1.0).clamp(-1,1).pow(11)    # (B,B)
+        #         dot_pred = output @ output.T                   # (B,B)
+        #         # 4. kernel MSE loss
+        #         loss_kernel = F.mse_loss(dot_pred.flatten(), K_target.flatten())
+        #         # 6. 合併所有 loss
+        #         if epoch < 10:
+        #             loss = loss_align
+        #         else:
+        #             loss = loss_align + lambda_k * loss_kernel
+        #         if isinstance(converter, HilbertProjectionConverter):
+        #             loss = loss + reg_loss
+        #         # 7. 反向、更新
+        #         val_loss += loss.item()
         
         val_loss /= len(val_loader)
         scheduler.step()
