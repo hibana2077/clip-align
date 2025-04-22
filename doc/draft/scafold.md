@@ -55,7 +55,7 @@
     3. Kernel CCA & CKA → 非線性相似度  
     4. 小型 MLP 映射對比 → MSE 下降幅度  
     5. 置換測試 → p‑value 顯著性
-    - 結論: 數據支持是 nonlinear projection 的
+    - 結論: 數據支持是 nonlinear projection 的，且用 polynomial kernel, CCA 可以達到 0.76 的 correlation
 - **Data Align 敏感度**  
     - Urban1k、Docci5k、Flickr1k、Flux1k  
     - 對齊資料量（1k→5k→10k→50k）對 Recall@{1,5,10} 的變化曲線與斜率比較  
