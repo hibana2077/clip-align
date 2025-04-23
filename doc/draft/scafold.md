@@ -30,11 +30,12 @@
 
 ---
 
-## Method  
+## Method
+
 - **Adapter 設計**  
-  - 雙路徑結構：path1（寬淺）、path2（窄深）  
-  - hidden_dim、depth、dropout、weight decay 等超參數說明  
-  - 參數量與額外 FLOPs 分析  
+  - 雙路徑結構：path1（寬淺）、path2（窄深
+  - hidden_dim、depth、dropout、weight decay 等超參數說明
+  - 參數量與額外 FLOPs 分析
 - **Loss Design**  
   - **Similarity Loss**：拉近特徵向量單點距離  
   - **Contrastive Loss**：維持 batch 內硬負樣本對比  
