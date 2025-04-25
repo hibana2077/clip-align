@@ -16,7 +16,8 @@
 
 ---
 
-## Related Work  
+## Related Work
+
 - **按資料需求分類**  
   - 需 image–text pairing：CLIP‑Adapter、LiT、Tip‑Adapter  
   - 純影像對齊／蒸餾：TinyCLIP、CLIP‑KD、Domain Aligned CLIP  
